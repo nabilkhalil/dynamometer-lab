@@ -1,0 +1,1605 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kistler Dynamometer Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: instrument console. Procedure rail | live 3D test bench | measurement dashboard, then signal chain and a tabbed workbench. */
+:root{
+  --bg:#e8ecf0; --surface:#ffffff; --surface-2:#f2f4f7; --ink:#15202b; --muted:#566473; --line:#d0d7df;
+  --accent:#0b6b77; --accent-soft:#d7ecee; --accent-ink:#ffffff;
+  --ok:#25804f; --warn:#a85a00; --crit:#bd2630;
+  --fx:#cf3448; --fy:#1f8f55; --fz:#2b63cc; --fr:#a87b06;
+  --catA:#2b63cc; --catB:#1f8f55; --catC:#a85a00;
+  --vp-top:#e6ebef; --vp-bot:#c7d0d8; --floor:#aab3ba; --scene:#d9e0e6;
+  --display:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+  --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1318; --surface:#151c23; --surface-2:#1b242d; --ink:#e2e8ee; --muted:#93a2b1; --line:#283440;
+  --accent:#3db3bf; --accent-soft:#16343a; --accent-ink:#06191c;
+  --ok:#47c07e; --warn:#e39a3b; --crit:#f0606a;
+  --fx:#ff6b7c; --fy:#4cd18a; --fz:#71a4ff; --fr:#f0bb4c;
+  --catA:#71a4ff; --catB:#4cd18a; --catC:#e39a3b;
+  --vp-top:#18212a; --vp-bot:#0e141a; --floor:#2a333b; --scene:#121a21; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1318; --surface:#151c23; --surface-2:#1b242d; --ink:#e2e8ee; --muted:#93a2b1; --line:#283440;
+  --accent:#3db3bf; --accent-soft:#16343a; --accent-ink:#06191c;
+  --ok:#47c07e; --warn:#e39a3b; --crit:#f0606a;
+  --fx:#ff6b7c; --fy:#4cd18a; --fz:#71a4ff; --fr:#f0bb4c;
+  --catA:#71a4ff; --catB:#4cd18a; --catC:#e39a3b;
+  --vp-top:#18212a; --vp-bot:#0e141a; --floor:#2a333b; --scene:#121a21; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:1720px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+/* header */
+header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 20px}
+.brand{display:flex;gap:12px;align-items:center;min-width:0}
+.mark{flex:none;width:42px;height:42px;border-radius:5px;background:var(--ink);display:grid;place-items:center}
+.mark svg{width:28px;height:28px}
+h1{font-family:var(--display);font-weight:700;font-size:27px;letter-spacing:.01em;margin:0;line-height:1.02;text-wrap:balance}
+.sub{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+.modes{display:flex;flex-wrap:wrap;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px}
+.modes button{border:0;background:transparent;padding:6px 11px;border-radius:4px;font-weight:500;font-size:13px}
+.modes button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.badges{display:flex;flex-wrap:wrap;gap:6px}
+.badge{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:3px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.sim{border-color:var(--catC);color:var(--catC)}
+.badge.crit{background:var(--crit);border-color:var(--crit);color:#fff}
+.badge.warn{background:var(--warn);border-color:var(--warn);color:#fff}
+.badge.ok{border-color:var(--ok);color:var(--ok)}
+/* grid */
+.grid{display:grid;grid-template-columns:236px minmax(0,1fr) 372px;gap:12px;align-items:start}
+@media (max-width:1240px){.grid{grid-template-columns:224px minmax(0,1fr)}.dash{grid-column:1/-1}}
+@media (max-width:780px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px}
+.eyebrow{font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+/* steps */
+.steps{padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.steps ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.step{display:flex;gap:9px;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface-2);border-radius:5px;padding:6px 8px;font-size:13px;line-height:1.25}
+.step .n{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:11px;border:1px solid var(--line);background:var(--surface)}
+.step:disabled{opacity:.42;cursor:not-allowed}
+.step.current{border-color:var(--accent);background:var(--accent-soft)}
+.step.current .n{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.step.done .n{background:var(--ok);border-color:var(--ok);color:#fff}
+.step.busy{animation:pulse 1s infinite alternate}
+@keyframes pulse{to{border-color:var(--accent)}}
+.stepnote{font-size:12.8px;border-top:1px solid var(--line);padding-top:10px;min-height:80px}
+.stepnote h3{font-family:var(--display);font-size:17px;margin:0 0 4px;font-weight:600}
+.stepnote p{margin:0 0 6px}
+.stepnote ul{margin:4px 0;padding-left:18px}
+/* viewport */
+.vpwrap{display:flex;flex-direction:column;gap:8px;min-width:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:5px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;border-right:1px solid var(--line);background:transparent;padding:5px 9px;font-size:12.5px}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.seglabel{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.vp{position:relative;height:clamp(380px,60vh,620px);border-radius:6px;overflow:hidden;border:1px solid var(--line);background:linear-gradient(var(--vp-top),var(--vp-bot))}
+#three{display:block;width:100%;height:100%;touch-action:none}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;left:0;top:0;font-size:11px;font-weight:500;white-space:nowrap;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);padding:2px 6px;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.vp-run{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 20px)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:6px 12px;font-weight:500;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.stop{background:var(--crit);color:#fff;border-color:var(--crit)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.vp-cap{position:absolute;right:10px;top:10px;max-width:min(340px,calc(100% - 20px));font-size:12px;background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--line);border-radius:5px;padding:8px 10px}
+.vp-cap:empty{display:none}
+.vp-cap b{font-family:var(--display);font-size:15px;font-weight:600}
+.vp-hint{position:absolute;right:10px;bottom:10px;font-size:11px;color:var(--muted);background:color-mix(in srgb,var(--surface) 80%,transparent);padding:3px 7px;border-radius:3px}
+.exag{display:flex;align-items:center;gap:6px;font-size:12px}
+.exag input{width:110px}
+/* dashboard */
+.dash{display:flex;flex-direction:column;gap:10px;min-width:0}
+.readouts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+@media (max-width:1240px) and (min-width:781px){.readouts{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.ro{background:var(--surface);padding:7px 10px;min-width:0}
+.ro .k{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:6px}
+.ro .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ro .v small{font-size:11px;font-weight:400;color:var(--muted);margin-left:3px}
+.ro.fx .v{color:var(--fx)}.ro.fy .v{color:var(--fy)}.ro.fz .v{color:var(--fz)}.ro.fr .v{color:var(--fr)}
+.plotcard{padding:8px 10px 10px}
+.plothead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.legend{display:flex;gap:10px;font-family:var(--mono);font-size:10.5px}
+.legend i{display:inline-block;width:10px;height:3px;vertical-align:middle;margin-right:4px}
+canvas.plot{display:block;width:100%;height:150px}
+canvas.plot.sm{height:78px}
+.sm3{display:grid;gap:4px}
+.statline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:6px;font-family:var(--mono);font-size:11px}
+.statline div{background:var(--surface-2);border-radius:3px;padding:4px 6px;min-width:0}
+.statline span{display:block;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.pulse-hi{animation:hi 1.2s 3}
+@keyframes hi{50%{box-shadow:0 0 0 3px var(--accent)}}
+/* chain */
+.chain{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.chainrow{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding-bottom:4px}
+.node{flex:1 0 108px;min-width:108px;border:1px solid var(--line);background:var(--surface-2);border-radius:5px;padding:7px 8px;text-align:left;position:relative;font-size:12px}
+.node b{display:block;font-family:var(--display);font-size:15px;font-weight:600;line-height:1.1}
+.node span{font-family:var(--mono);font-size:10.5px;color:var(--muted);display:block;margin-top:2px}
+.node.mech{border-top:3px solid var(--fr)}
+.node.elec{border-top:3px solid var(--accent)}
+.link{flex:0 0 26px;display:grid;place-items:center;position:relative;overflow:hidden}
+.link::before{content:"";position:absolute;left:2px;right:2px;top:50%;height:2px;background:var(--line)}
+.link::after{content:"";position:absolute;top:calc(50% - 3px);left:0;width:8px;height:8px;border-radius:50%;background:var(--accent);opacity:0}
+.chain.live .link::after{animation:flow 0.9s linear infinite;opacity:1}
+.chain.live .link.m::after{background:var(--fr)}
+@keyframes flow{from{left:-8px}to{left:100%}}
+.chain.live .node{animation:none}
+.chainvals{display:flex;flex-wrap:wrap;gap:6px 16px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.chainvals b{color:var(--ink);font-weight:600}
+.bigidea{margin:0;padding:12px 16px;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 6px 6px 0;font-size:15.5px;max-width:none}
+.bigidea strong{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:.01em}
+/* tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid var(--line);padding:6px 8px 0}
+.tabs button{border:1px solid transparent;border-bottom:0;background:transparent;padding:7px 12px;border-radius:5px 5px 0 0;font-weight:500;font-size:13px;color:var(--muted);margin-bottom:-1px}
+.tabs button[aria-selected="true"]{background:var(--surface);border-color:var(--line);color:var(--ink)}
+.tabpanel{padding:14px;min-width:0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px 22px}
+.fieldset{display:flex;flex-direction:column;gap:9px;min-width:0}
+.fieldset h4{margin:0;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+.ctl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;font-size:13px}
+.ctl label{min-width:0}
+.ctl .val{font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;text-align:right;min-width:70px}
+.ctl input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--accent)}
+.ctl select{grid-column:1/-1;width:100%;padding:5px 6px;border:1px solid var(--line);border-radius:4px;background:var(--surface-2)}
+.tog{display:flex;align-items:flex-start;gap:8px;font-size:13px}
+.tog input{margin-top:3px;accent-color:var(--accent)}
+.tog small{display:block;color:var(--muted);font-size:11.5px}
+.derived{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.derived div{background:var(--surface-2);padding:6px 8px;font-family:var(--mono);font-size:12px;min-width:0}
+.derived span{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-family:var(--body)}
+.cat{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.cat.A{color:var(--catA)}.cat.B{color:var(--catB)}.cat.C{color:var(--catC)}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:5px}
+table.tbl{border-collapse:collapse;width:100%;font-size:12.5px}
+.tbl th,.tbl td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl th{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--surface-2);font-weight:600}
+.tbl td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.note{font-size:12.5px;color:var(--muted);max-width:75ch}
+.prose{max-width:80ch;font-size:14px}
+.prose h3{font-family:var(--display);font-size:20px;font-weight:600;margin:18px 0 6px}
+.prose h3:first-child{margin-top:0}
+.eq{font-family:var(--mono);font-size:13px;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin:6px 0;overflow-x:auto;white-space:pre}
+.interp{font-size:13px;border-left:3px solid var(--accent);padding:6px 10px;background:var(--surface-2);border-radius:0 4px 4px 0}
+.interp p{margin:0 0 5px}
+.q{border:1px solid var(--line);border-radius:5px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.q .qt{font-weight:500}
+.q .opts{display:grid;gap:4px}
+.q .opts button{text-align:left;border:1px solid var(--line);background:var(--surface-2);border-radius:4px;padding:6px 9px;font-size:13px}
+.q .opts button.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.q .opts button.wrong{border-color:var(--crit);background:color-mix(in srgb,var(--crit) 12%,var(--surface))}
+.q .fb{font-size:12.5px;color:var(--muted)}
+.q .topic{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.qgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px}
+.score{font-family:var(--display);font-size:22px;font-weight:700}
+input.num{width:110px;padding:5px 7px;border:1px solid var(--line);border-radius:4px;background:var(--surface-2);font-family:var(--mono)}
+/* overlays */
+.infocard{position:fixed;z-index:30;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 32px));background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,.25);padding:12px 14px}
+.infocard h3{margin:0 0 4px;font-family:var(--display);font-size:20px;font-weight:600;padding-right:28px}
+.infocard p{margin:0 0 6px;font-size:13.3px}
+.infocard .x{position:absolute;right:8px;top:8px;border:0;background:transparent;font-size:18px;line-height:1;padding:4px 8px}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(5,10,15,.5);display:grid;place-items:center;padding:16px}
+.modal .box{background:var(--surface);border:1px solid var(--line);border-radius:6px;width:min(780px,100%);max-height:90vh;display:flex;flex-direction:column;gap:8px;padding:14px}
+.modal textarea{width:100%;min-height:260px;flex:1;font-family:var(--mono);font-size:11.5px;background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px;resize:vertical}
+.toast{position:fixed;z-index:50;top:calc(14px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:8px 14px;border-radius:5px;font-size:13px;max-width:calc(100% - 32px)}
+.loadfail{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="app">
+<header class="top">
+  <div class="brand">
+    <div class="mark" aria-hidden="true"><svg viewBox="0 0 28 28"><rect x="3" y="15" width="22" height="5" rx="1" fill="#c9d0d6"/><rect x="3" y="21" width="22" height="3" rx="1" fill="#8f99a3"/><rect x="9" y="9" width="10" height="6" fill="#e2e6ea"/><path d="M14 2v6" stroke="#ff6b7c" stroke-width="2"/><path d="M14 8l-2.5-3M14 8l2.5-3" stroke="#ff6b7c" stroke-width="1.6" fill="none"/></svg></div>
+    <div style="min-width:0">
+      <h1>Cutting Force Dynamometer Lab</h1>
+      <p class="sub">Three-component piezoelectric force measurement, modelled on a Kistler 9257B-type dynamometer · interactive milling bench</p>
+    </div>
+  </div>
+  <nav class="modes" role="tablist" aria-label="Learning mode">
+    <button role="tab" data-mode="guided" aria-selected="true">Guided learning</button>
+    <button role="tab" data-mode="free" aria-selected="false">Free exploration</button>
+    <button role="tab" data-mode="experiment" aria-selected="false">Virtual experiment</button>
+    <button role="tab" data-mode="assess" aria-selected="false">Assessment</button>
+  </nav>
+  <div class="badges" id="badges">
+    <span class="badge sim" title="All signals are generated by a model, not measured">Simulated data</span>
+    <span class="badge" id="bState">Idle</span>
+    <span class="badge crit" id="bOver" hidden>Overload &gt; range</span>
+    <span class="badge warn" id="bSat" hidden>Amplifier saturated</span>
+    <span class="badge warn" id="bAlias" hidden>Aliasing risk</span>
+    <span class="badge warn" id="bRes" hidden>Near resonance</span>
+    <span class="badge warn" id="bZero" hidden>Not zeroed</span>
+  </div>
+</header>
+
+<main class="grid">
+  <aside class="card steps" aria-label="Operating procedure">
+    <p class="eyebrow" id="stepsTitle">Operating procedure · guided</p>
+    <ol id="stepList"></ol>
+    <div class="stepnote" id="stepNote"></div>
+  </aside>
+
+  <section class="vpwrap" aria-label="3D test bench">
+    <div class="toolbar">
+      <span class="seglabel">Anatomy</span>
+      <div class="seg" id="viewSeg">
+        <button data-view="external" aria-pressed="true">External</button>
+        <button data-view="transparent" aria-pressed="false">Transparent</button>
+        <button data-view="section" aria-pressed="false">Section</button>
+        <button data-view="exploded" aria-pressed="false">Exploded</button>
+        <button data-view="sensor" aria-pressed="false">Sensor</button>
+        <button data-view="flow" aria-pressed="false">Force path</button>
+      </div>
+      <span class="seglabel">Camera</span>
+      <div class="seg" id="camSeg">
+        <button data-cam="iso">Iso</button><button data-cam="front">Front</button><button data-cam="top">Top</button><button data-cam="dyn">Dyno</button><button data-cam="chain">Chain</button>
+      </div>
+      <label class="exag" title="Visual exaggeration of elastic deflection. Real deflection is shown in the dashboard.">Deflection ×<input type="range" id="exag" min="0" max="10000" step="250" value="2000"><span class="mono" id="exagVal">2000</span></label>
+      <label class="tog" style="align-items:center"><input type="checkbox" id="tVec" checked>Force vectors</label>
+    </div>
+    <div class="vp" id="vp">
+      <canvas id="three" aria-label="Interactive 3D milling setup with dynamometer. Drag to orbit, scroll to zoom, right-drag to pan, click a part for details."></canvas>
+      <div id="labels"></div>
+      <div class="vp-cap" id="vpCap"></div>
+      <div class="vp-run">
+        <button class="btn primary" id="bRun">Start machining</button>
+        <button class="btn" id="bPass">New pass</button>
+        <button class="btn" id="bZeroBtn">Reset / zero amplifier</button>
+      </div>
+      <div class="vp-hint">Drag: orbit · Scroll: zoom · Right-drag: pan · Click a part</div>
+    </div>
+  </section>
+
+  <aside class="dash" aria-label="Live measurement dashboard">
+    <div class="readouts" id="readouts">
+      <div class="ro fx"><div class="k"><span>F<sub>x</sub> feed</span><span>N</span></div><div class="v" id="rFx">0.0</div></div>
+      <div class="ro fy"><div class="k"><span>F<sub>y</sub> normal</span><span>N</span></div><div class="v" id="rFy">0.0</div></div>
+      <div class="ro fz"><div class="k"><span>F<sub>z</sub> axial</span><span>N</span></div><div class="v" id="rFz">0.0</div></div>
+      <div class="ro fr"><div class="k"><span>F<sub>r</sub> resultant</span><span>N</span></div><div class="v" id="rFr">0.0</div></div>
+      <div class="ro"><div class="k"><span>Spindle N</span><span>rpm</span></div><div class="v" id="rN">0</div></div>
+      <div class="ro"><div class="k"><span>Cutting speed V<sub>c</sub></span><span>m/min</span></div><div class="v" id="rVc">0</div></div>
+      <div class="ro"><div class="k"><span>Feed f<sub>z</sub></span><span>mm/tooth</span></div><div class="v" id="rFz2">0</div></div>
+      <div class="ro"><div class="k"><span>Depth a<sub>p</sub></span><span>mm</span></div><div class="v" id="rAp">0</div></div>
+      <div class="ro"><div class="k"><span>Amp out x/y/z</span><span>V</span></div><div class="v" id="rV" style="font-size:14px">0 / 0 / 0</div></div>
+      <div class="ro"><div class="k"><span>Meas. time</span><span>s</span></div><div class="v" id="rT">0.000</div></div>
+    </div>
+    <div class="card plotcard" id="plotCard">
+      <div class="plothead">
+        <p class="eyebrow">Force–time, combined</p>
+        <div class="legend"><span><i style="background:var(--fx)"></i>Fx</span><span><i style="background:var(--fy)"></i>Fy</span><span><i style="background:var(--fz)"></i>Fz</span><span><i style="background:var(--fr)"></i>Fr</span></div>
+      </div>
+      <canvas class="plot" id="pAll"></canvas>
+      <div class="sm3">
+        <canvas class="plot sm" id="pX"></canvas>
+        <canvas class="plot sm" id="pY"></canvas>
+        <canvas class="plot sm" id="pZ"></canvas>
+      </div>
+      <div class="statline" id="statLine"></div>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="tTrue">Overlay true model force (dashed): shows what the measurement chain changes</label>
+    </div>
+  </aside>
+</main>
+
+<section class="card chain" id="chain" aria-label="Measurement signal chain">
+  <div class="row" style="justify-content:space-between"><p class="eyebrow">Signal chain · click any stage</p><div class="chainvals" id="chainVals"></div></div>
+  <div class="chainrow" id="chainRow"></div>
+</section>
+
+<p class="bigidea"><strong>The big idea:</strong> Cutting forces deform the dynamometer’s sensing structure, producing piezoelectric charge signals that are converted into measurable force components.</p>
+
+<section class="card" aria-label="Workbench">
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="params" aria-selected="true">Cutting & chain parameters</button>
+    <button role="tab" data-tab="analysis" aria-selected="false">Analysis</button>
+    <button role="tab" data-tab="experiment" aria-selected="false">Experiment log</button>
+    <button role="tab" data-tab="assess" aria-selected="false">Assessment</button>
+    <button role="tab" data-tab="data" aria-selected="false">Constants & sources</button>
+    <button role="tab" data-tab="theory" aria-selected="false">Theory</button>
+  </div>
+  <div class="tabpanel" data-panel="params">
+    <div class="cols">
+      <div class="fieldset" id="fsCut"><h4>Cutting parameters</h4></div>
+      <div class="fieldset" id="fsChain"><h4>Measurement chain</h4></div>
+      <div class="fieldset"><h4>Error sources & display</h4><div id="fsErr" class="fieldset"></div>
+        <h4 style="margin-top:6px">Derived values (model)</h4><div class="derived" id="derived"></div>
+        <p class="note" id="matNote"></p></div>
+    </div>
+  </div>
+  <div class="tabpanel" data-panel="analysis" hidden>
+    <div class="cols">
+      <div class="fieldset" style="min-width:0">
+        <h4>Signal statistics, last window</h4>
+        <div class="tblwrap"><table class="tbl" id="statTbl"></table></div>
+        <p class="note">Peak = max |F|. RMS includes the mean. “Model” row compares the measured mean with the noise-free model force, so the chain error is visible.</p>
+      </div>
+      <div class="fieldset" style="min-width:0">
+        <div class="row" style="justify-content:space-between"><h4>Amplitude spectrum</h4>
+          <select id="specCh" style="padding:4px;border:1px solid var(--line);border-radius:4px;background:var(--surface-2)"><option value="fr">Fr</option><option value="fx">Fx</option><option value="fy">Fy</option><option value="fz">Fz</option></select></div>
+        <canvas class="plot" id="pSpec" style="height:190px"></canvas>
+        <p class="note">Dashed lines: tooth-passing frequency f<sub>TP</sub> = N·z/60 and its harmonics. Red line: mounted natural frequency. Shaded: above Nyquist (f<sub>s</sub>/2).</p>
+      </div>
+      <div class="fieldset" style="min-width:0"><h4>Interpretation</h4><div class="interp" id="interp"><p>Run a cut to analyse the force signal.</p></div></div>
+    </div>
+  </div>
+  <div class="tabpanel" data-panel="experiment" hidden>
+    <div class="cols">
+      <div class="fieldset" style="min-width:0">
+        <h4>Recorded trials</h4>
+        <p class="note">Run a cut, then record. Each trial stores the parameters and the steady-cut statistics in this browser.</p>
+        <div class="row"><button class="btn primary" id="bRec">Record current trial</button><button class="btn" id="bExpTrials">Export trials CSV</button><button class="btn" id="bExpRaw">Export raw signal CSV</button><button class="btn" id="bClear">Clear trials</button></div>
+        <div class="tblwrap"><table class="tbl" id="trialTbl"></table></div>
+        <canvas class="plot" id="pTrials" style="height:170px"></canvas>
+      </div>
+      <div class="fieldset" style="min-width:0">
+        <h4>Parameter sweep (steady model, instant)</h4>
+        <p class="note">Sweeps one parameter around the current setup using the force model only, one full revolution in steady engagement. Use it to plan trials before you cut.</p>
+        <div class="row"><select id="swParam" style="padding:5px;border:1px solid var(--line);border-radius:4px;background:var(--surface-2)">
+          <option value="fz">Feed per tooth fz</option><option value="ap">Axial depth ap</option><option value="ae">Radial width ae</option><option value="Vc">Cutting speed Vc</option><option value="z">Number of teeth z</option><option value="D">Tool diameter D</option></select>
+          <button class="btn" id="bSweep">Run sweep</button></div>
+        <canvas class="plot" id="pSweep" style="height:210px"></canvas>
+        <p class="note" id="sweepNote"></p>
+      </div>
+    </div>
+  </div>
+  <div class="tabpanel" data-panel="assess" hidden>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <div><span class="score" id="score">0 / 0</span> <span class="muted" id="scoreSub"></span></div>
+      <div class="row"><label style="font-size:13px">Student name / ID <input id="stuName" class="num" style="width:180px;font-family:var(--body)"></label><button class="btn primary" id="bReport">Generate report</button><button class="btn" id="bQuizReset">Restart assessment</button></div>
+    </div>
+    <h4 class="eyebrow" style="margin:6px 0">Interactive tasks · use the simulator</h4>
+    <div class="qgrid" id="tasks"></div>
+    <h4 class="eyebrow" style="margin:16px 0 6px">Concept questions</h4>
+    <div class="qgrid" id="quiz"></div>
+  </div>
+  <div class="tabpanel" data-panel="data" hidden>
+    <p class="note" style="margin-top:0">Every constant used by the simulator, with its category: <span class="cat A">A</span> verified manufacturer specification, <span class="cat B">B</span> engineering equation or referenced property, <span class="cat C">C</span> educational assumption or simulated value. Kistler calibration coefficients are never invented; the sensitivities below are the nominal published values, and a real dynamometer is used with its own calibration sheet.</p>
+    <div class="tblwrap"><table class="tbl" id="constTbl"></table></div>
+    <h4 class="eyebrow" style="margin:14px 0 6px">Sources</h4>
+    <ol id="srcList" style="margin:0;padding-left:20px;font-size:13px"></ol>
+  </div>
+  <div class="tabpanel prose" data-panel="theory" hidden id="theory"></div>
+</section>
+</div>
+
+<div class="infocard" id="info" hidden role="dialog" aria-live="polite"><button class="x" id="infoX" aria-label="Close">×</button><div id="infoBody"></div></div>
+<div class="modal" id="modal" hidden><div class="box" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="row" style="justify-content:space-between"><h3 id="mTitle" style="margin:0;font-family:var(--display);font-size:20px"></h3><button class="btn" id="mClose">Close</button></div>
+  <p class="note" id="mNote" style="margin:0"></p>
+  <textarea id="mText" readonly spellcheck="false"></textarea>
+  <div class="row"><button class="btn primary" id="mDl">Download file</button><button class="btn" id="mCopy">Copy to clipboard</button><span class="muted" id="mMsg" style="font-size:12px"></span></div>
+</div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+'use strict';
+/* =====================================================================
+   MODULE 1 — MODEL (pure JavaScript, no DOM, no 3D)
+   Mechanistic milling force model (Altintas), kinematics, specifications.
+   ===================================================================== */
+const TAU = Math.PI * 2;
+const Model = (() => {
+  // Category A: verified from the Kistler 9257B product page (see Sources).
+  const SPEC = {
+    name: 'Kistler 9257B', plate: { L: 170, W: 100 },
+    rangeXY: 5000, rangeZmin: -5000, rangeZmax: 10000,
+    S: [-7.5, -7.5, -3.7],          // pC/N nominal sensitivity
+    fn: 3500,                        // Hz, natural frequency of the sensor (free)
+    kx: 1000, ky: 1000,              // N/µm stiffness
+    connector: 'Fischer 9-pin flange', preloaded: true
+  };
+  // Category C: educational assumptions (not manufacturer data).
+  const ILLUS = {
+    height: 60, sensorPos: [[60, -30], [60, 30], [-60, 30], [-60, -30]], sensorA: 60, sensorB: 30,
+    kz: 2000, zeta: 0.03,
+    crosstalk: [[1, 0.012, 0.008], [-0.010, 1, 0.009], [0.015, -0.012, 1]],
+    offsetQ: [180, -120, 260], driftRate: [6, -5, 7], noiseQ: 40,
+    helix: 30, nDisc: 8, adcBits: 16, adcRange: 10,
+    wp: { x0: -60, x1: 60, y0: -40, y1: 40, h: 40 }
+  };
+  // Cutting force coefficients K_tc, K_rc, K_ac [N/mm²], edge K_te, K_re, K_ae [N/mm]
+  const MATERIALS = {
+    al6061: { name: 'Aluminium 6061-T6', Ktc: 796, Krc: 169, Kac: 222, Kte: 27.7, Kre: 30.8, Kae: 1.8, Vc: 200, color: 0xc9d0d7,
+      cat: 'C', note: 'Coefficients are the Al7050-T7451 values given by Altintas (Manufacturing Automation, 2012), used as a proxy for 6061. They are referenced data for 7050, not a calibration for 6061.' },
+    steel: { name: 'Mild steel (low-carbon)', Ktc: 2100, Krc: 800, Kac: 450, Kte: 40, Kre: 50, Kae: 3, Vc: 120, color: 0x7f878e,
+      cat: 'C', note: 'Illustrative order-of-magnitude coefficients for teaching. Identify real values from your own slot-milling tests before quantitative use.' },
+    ss316l: { name: 'Stainless steel 316L', Ktc: 2700, Krc: 1050, Kac: 600, Kte: 50, Kre: 65, Kae: 4, Vc: 80, color: 0xaab4bf,
+      cat: 'C', note: 'Illustrative coefficients. 316L work-hardens, so real coefficients depend strongly on edge condition, coating and tool wear.' }
+  };
+  function engagement(p) {
+    const R = p.D / 2;
+    const ae = p.mode === 'slot' ? p.D : Math.min(p.ae, p.D);
+    let phst, phex;
+    if (p.mode === 'slot') { phst = 0; phex = Math.PI; }
+    else { const a = Math.acos(1 - ae / R); if (p.mode === 'up') { phst = 0; phex = a; } else { phst = Math.PI - a; phex = Math.PI; } }
+    return { ae, phst, phex };
+  }
+  function kin(p) {
+    const e = engagement(p);
+    const N = 1000 * p.Vc / (Math.PI * p.D);
+    const Vf = N * p.z * p.fz;
+    const TPF = N * p.z / 60;
+    const hmax = (e.phst <= Math.PI / 2 && e.phex >= Math.PI / 2) ? p.fz : p.fz * Math.max(Math.sin(e.phst), Math.sin(e.phex));
+    const MRR = e.ae * p.ap * Vf / 1000; // cm³/min
+    return { N, Vf, TPF, fsp: N / 60, hmax, MRR, ...e };
+  }
+  // Force acting ON THE TOOL (Altintas convention: x feed, y normal, φ clockwise from +y).
+  function forceOnTool(theta, xc, p, k, wx0, wx1, out) {
+    const m = MATERIALS[p.mat], R = p.D / 2, nd = ILLUS.nDisc, dz = p.ap / nd;
+    const kb = Math.tan(p.helix * Math.PI / 180) / R, pitch = TAU / p.z;
+    let Fx = 0, Fy = 0, Fz = 0, hMax = 0, nEng = 0;
+    for (let j = 0; j < p.z; j++) {
+      let eng = false;
+      for (let d = 0; d < nd; d++) {
+        const zz = (d + 0.5) * dz;
+        let phi = (theta + j * pitch - kb * zz) % TAU; if (phi < 0) phi += TAU;
+        if (phi < k.phst || phi > k.phex) continue;
+        const s = Math.sin(phi), c = Math.cos(phi);
+        const xt = xc + R * s; if (xt < wx0 || xt > wx1) continue;
+        const h = p.fz * s; if (h <= 0) continue;
+        const dFt = (m.Ktc * h + m.Kte) * dz, dFr = (m.Krc * h + m.Kre) * dz, dFa = (m.Kac * h + m.Kae) * dz;
+        Fx += -dFt * c - dFr * s; Fy += dFt * s - dFr * c; Fz += dFa;
+        eng = true; if (d === (nd >> 1) && h > hMax) hMax = h;
+      }
+      if (eng) nEng++;
+    }
+    out.Fx = Fx; out.Fy = Fy; out.Fz = Fz; out.h = hMax; out.nEng = nEng; return out;
+  }
+  // Steady statistics over one revolution with full engagement (forces on workpiece).
+  function steadyStats(p) {
+    const k = kin(p), o = {}, n = 1440;
+    const acc = { fx: [], fy: [], fz: [], fr: [] };
+    for (let i = 0; i < n; i++) {
+      forceOnTool(TAU * i / n, 0, p, k, -Infinity, Infinity, o);
+      const x = -o.Fx, y = -o.Fy, z = -o.Fz;
+      acc.fx.push(x); acc.fy.push(y); acc.fz.push(z); acc.fr.push(Math.hypot(x, y, z));
+    }
+    const r = {}; for (const key in acc) r[key] = Stats.of(acc[key], acc[key].length); return r;
+  }
+  return { SPEC, ILLUS, MATERIALS, kin, forceOnTool, steadyStats };
+})();
+
+/* ---------- small numeric utilities ---------- */
+const Stats = {
+  of(a, n) {
+    if (!n) return { mean: 0, rms: 0, peak: 0, max: 0, min: 0, pp: 0 };
+    let s = 0, s2 = 0, mx = -Infinity, mn = Infinity;
+    for (let i = 0; i < n; i++) { const v = a[i]; s += v; s2 += v * v; if (v > mx) mx = v; if (v < mn) mn = v; }
+    return { mean: s / n, rms: Math.sqrt(s2 / n), peak: Math.max(Math.abs(mx), Math.abs(mn)), max: mx, min: mn, pp: mx - mn };
+  },
+  fft(x, fs) {
+    let n = 1; while (n * 2 <= x.length && n < 8192) n *= 2; if (n < 64) return null;
+    const re = new Float64Array(n), im = new Float64Array(n), off = x.length - n;
+    let mean = 0; for (let i = 0; i < n; i++) mean += x[off + i]; mean /= n;
+    for (let i = 0; i < n; i++) re[i] = (x[off + i] - mean) * (0.5 - 0.5 * Math.cos(TAU * i / (n - 1)));
+    for (let i = 1, j = 0; i < n; i++) { let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { const t = re[i]; re[i] = re[j]; re[j] = t; } }
+    for (let len = 2; len <= n; len <<= 1) {
+      const ang = -TAU / len, wr = Math.cos(ang), wi = Math.sin(ang), h = len >> 1;
+      for (let i = 0; i < n; i += len) { let cr = 1, ci = 0;
+        for (let k = 0; k < h; k++) { const a = i + k, b = a + h;
+          const vr = re[b] * cr - im[b] * ci, vi = re[b] * ci + im[b] * cr;
+          re[b] = re[a] - vr; im[b] = im[a] - vi; re[a] += vr; im[a] += vi;
+          const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } }
+    }
+    const mag = new Float32Array(n / 2); for (let k = 0; k < n / 2; k++) mag[k] = 2 * Math.hypot(re[k], im[k]) / (n * 0.5);
+    let pk = 2; for (let k = 2; k < n / 2; k++) if (mag[k] > mag[pk]) pk = k;
+    return { mag, df: fs / n, n, peakF: pk * fs / n, peakA: mag[pk] };
+  }
+};
+let _g2 = null;
+function gauss() { if (_g2 !== null) { const v = _g2; _g2 = null; return v; } let u = 0, v = 0; while (u === 0) u = Math.random(); v = Math.random(); const r = Math.sqrt(-2 * Math.log(u)); _g2 = r * Math.sin(TAU * v); return r * Math.cos(TAU * v); }
+
+/* =====================================================================
+   MODULE 2 — MEASUREMENT CHAIN (structure → quartz → charge amp → filter)
+   ===================================================================== */
+class Biquad {
+  constructor() { this.b0 = 1; this.b1 = 0; this.b2 = 0; this.a1 = 0; this.a2 = 0; this.z1 = 0; this.z2 = 0; }
+  lowpass(fc, Q, fs) { fc = Math.min(fc, fs * 0.45); const w = TAU * fc / fs, c = Math.cos(w), s = Math.sin(w), al = s / (2 * Q), a0 = 1 + al;
+    this.b0 = (1 - c) / 2 / a0; this.b1 = (1 - c) / a0; this.b2 = this.b0; this.a1 = -2 * c / a0; this.a2 = (1 - al) / a0; return this; }
+  run(x) { const y = this.b0 * x + this.z1; this.z1 = this.b1 * x - this.a1 * y + this.z2; this.z2 = this.b2 * x - this.a2 * y; return y; }
+  reset(v = 0) { this.z1 = v * (1 - this.b0); this.z2 = v * (this.b2 - this.a2); }
+}
+const Chain = (() => {
+  const dyn = [new Biquad(), new Biquad(), new Biquad()], flt = [new Biquad(), new Biquad(), new Biquad()];
+  const st = { zeroed: false, drift: [0, 0, 0], ampOn: false };
+  function configure(p, fs) { const Q = 1 / (2 * p.zeta); dyn.forEach(b => b.lowpass(p.fn, Q, fs)); flt.forEach(b => b.lowpass(p.fc, Math.SQRT1_2, fs)); }
+  function zero() { st.zeroed = true; st.drift = [0, 0, 0]; dyn.forEach(b => b.reset(0)); }
+  function unzero() { st.zeroed = false; }
+  function process(Fw, dt, p, out) {
+    const S = Model.SPEC.S, C = Model.ILLUS.crosstalk, I = Model.ILLUS;
+    let a = Fw[0], b = Fw[1], c = Fw[2];
+    if (p.dynamics) { a = dyn[0].run(a); b = dyn[1].run(b); c = dyn[2].run(c); }
+    out.Fs[0] = a; out.Fs[1] = b; out.Fs[2] = c;
+    let f0 = a, f1 = b, f2 = c;
+    if (p.crosstalk) { f0 = C[0][0] * a + C[0][1] * b + C[0][2] * c; f1 = C[1][0] * a + C[1][1] * b + C[1][2] * c; f2 = C[2][0] * a + C[2][1] * b + C[2][2] * c; }
+    const F = [f0, f1, f2];
+    for (let i = 0; i < 3; i++) {
+      let q = S[i] * F[i];
+      if (p.drift) { st.drift[i] += I.driftRate[i] * dt; q += st.drift[i]; }
+      if (!st.zeroed || p.unzeroed) q += I.offsetQ[i];
+      if (p.noise) q += gauss() * I.noiseQ;
+      out.Q[i] = q;
+      let v = q / (S[i] * p.scale);
+      if (v > I.adcRange) { v = I.adcRange; out.satT = 0.4; } else if (v < -I.adcRange) { v = -I.adcRange; out.satT = 0.4; }
+      out.Vf[i] = flt[i].run(v);
+    }
+  }
+  return { st, configure, zero, unzero, process };
+})();
+
+/* ---------- ring buffer of sampled data ---------- */
+const Buf = (() => {
+  const CAP = 1 << 17, M = CAP - 1;
+  const t = new Float64Array(CAP), fx = new Float32Array(CAP), fy = new Float32Array(CAP), fz = new Float32Array(CAP),
+    tx = new Float32Array(CAP), ty = new Float32Array(CAP), tz = new Float32Array(CAP), en = new Uint8Array(CAP);
+  let w = 0, n = 0;
+  function last(m) {
+    m = Math.min(m, n);
+    const o = { n: m, t: new Float64Array(m), fx: new Float32Array(m), fy: new Float32Array(m), fz: new Float32Array(m), fr: new Float32Array(m),
+      tx: new Float32Array(m), ty: new Float32Array(m), tz: new Float32Array(m), tr: new Float32Array(m), en: new Uint8Array(m) };
+    const s = (w - m + CAP) & M;
+    for (let i = 0; i < m; i++) { const j = (s + i) & M; o.t[i] = t[j]; o.fx[i] = fx[j]; o.fy[i] = fy[j]; o.fz[i] = fz[j];
+      o.fr[i] = Math.hypot(fx[j], fy[j], fz[j]); o.tx[i] = tx[j]; o.ty[i] = ty[j]; o.tz[i] = tz[j]; o.tr[i] = Math.hypot(tx[j], ty[j], tz[j]); o.en[i] = en[j]; }
+    return o;
+  }
+  return {
+    push(tt, Fm, Fw, e) { t[w] = tt; fx[w] = Fm[0]; fy[w] = Fm[1]; fz[w] = Fm[2]; tx[w] = Fw[0]; ty[w] = Fw[1]; tz[w] = Fw[2]; en[w] = e; w = (w + 1) & M; if (n < CAP) n++; },
+    clear() { w = 0; n = 0; }, get count() { return n; }, last,
+    window(T, cap = 40000) { if (!n) return last(0); const tl = t[(w - 1 + CAP) & M]; let m = 0; while (m < n && m < cap && t[(w - 1 - m + CAP) & M] >= tl - T) m++; return last(m); }
+  };
+})();
+
+/* =====================================================================
+   MODULE 3 — SIMULATION CLOCK (couples model, kinematics and chain)
+   ===================================================================== */
+const P = { mat: 'al6061', D: 12, z: 3, helix: 30, Vc: 200, fz: 0.08, ap: 4, ae: 6, mode: 'slot',
+  fs: 10000, fc: 3000, scale: 100, timeScale: 0.1, feedComp: 10, fn: 3500, zeta: 0.03,
+  noise: true, crosstalk: true, drift: false, dynamics: true, unzeroed: false, showTrue: false, exag: 2000, vectors: true };
+const WP = Model.ILLUS.wp;
+const Sim = (() => {
+  const FS = 100000, dt = 1 / FS;
+  const S = { FS, t: 0, theta: 0, xc: -250, yc: 0, ztip: 300, spindle: false, feeding: false, acquiring: false, atDepth: false,
+    passDone: false, passEvent: false, nextSample: 0, t0: 0, carry: 0,
+    Fw: [0, 0, 0], Fs: [0, 0, 0], Fm: [0, 0, 0], V: [0, 0, 0], Q: [0, 0, 0], Vf: [0, 0, 0], h: 0, nEng: 0, satT: 0, k: Model.kin(P) };
+  const tool = {};
+  function configure() { S.k = Model.kin(P); Chain.configure(P, FS); }
+  function cutPose() { const R = P.D / 2, k = S.k; let yc = 0;
+    if (P.mode === 'up') yc = WP.y0 + k.ae - R; else if (P.mode === 'down') yc = WP.y1 - k.ae + R;
+    return { x: WP.x0 - R - 8, y: yc, z: 100 - P.ap }; }
+  function step(realDt) {
+    S.satT = Math.max(0, S.satT - realDt);
+    if (!S.acquiring) return;
+    const simDt = Math.min(realDt, 0.05) * P.timeScale;
+    const nf = simDt * FS + S.carry, steps = Math.min(Math.floor(nf), 6000); S.carry = nf - Math.floor(nf);
+    const k = S.k, omega = TAU * k.N / 60, vx = k.Vf / 60 * P.feedComp, R = P.D / 2, xEnd = WP.x1 + R + 8;
+    const LSB = 2 * Model.ILLUS.adcRange / (2 ** Model.ILLUS.adcBits), Ts = 1 / P.fs;
+    for (let i = 0; i < steps; i++) {
+      S.t += dt;
+      if (S.spindle) S.theta = (S.theta + omega * dt) % TAU;
+      if (S.feeding) { S.xc += vx * dt; if (S.xc >= xEnd) { S.xc = xEnd; S.feeding = false; S.passDone = true; S.passEvent = true; } }
+      if (S.spindle && S.atDepth) {
+        Model.forceOnTool(S.theta, S.xc, P, k, WP.x0, WP.x1, tool);
+        S.Fw[0] = -tool.Fx; S.Fw[1] = -tool.Fy; S.Fw[2] = -tool.Fz; S.h = tool.h; S.nEng = tool.nEng;
+      } else { S.Fw[0] = S.Fw[1] = S.Fw[2] = 0; S.h = 0; S.nEng = 0; }
+      Chain.process(S.Fw, dt, P, S);
+      if (S.t >= S.nextSample) {
+        S.nextSample += Ts; if (S.nextSample < S.t) S.nextSample = S.t + Ts;
+        for (let a = 0; a < 3; a++) { const vq = Math.round(S.Vf[a] / LSB) * LSB; S.V[a] = vq; S.Fm[a] = vq * P.scale; }
+        Buf.push(S.t - S.t0, S.Fm, S.Fw, S.nEng);
+      }
+    }
+  }
+  return { S, configure, cutPose, step };
+})();
+
+/* =====================================================================
+   MODULE 4 — PLOTTING (canvas, no external chart library needed)
+   ===================================================================== */
+const TOK = {};
+function readTokens() { const cs = getComputedStyle(document.documentElement);
+  ['bg', 'surface', 'surface-2', 'ink', 'muted', 'line', 'accent', 'fx', 'fy', 'fz', 'fr', 'crit', 'warn', 'scene', 'floor', 'mono'].forEach(k => TOK[k] = cs.getPropertyValue('--' + k).trim()); }
+function niceTicks(a, b, n = 5) { if (!(b > a)) { a -= 1; b += 1; } const s0 = (b - a) / n, mag = 10 ** Math.floor(Math.log10(s0)), r = s0 / mag;
+  const step = (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag; const t = []; for (let v = Math.ceil(a / step) * step; v <= b + 1e-9 * step; v += step) t.push(Math.abs(v) < step * 1e-9 ? 0 : v); return { t, step }; }
+function fmtTick(v, step) { const d = Math.max(0, -Math.floor(Math.log10(step) + 1e-9)); return v.toFixed(Math.min(d, 4)); }
+function setupCanvas(cv) { const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight;
+  const W = Math.round(w * dpr), H = Math.round(h * dpr); if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return { ctx, w, h }; }
+function drawPlot(ctx, w, h, c) {
+  const col = c.colors || { text: TOK.muted, grid: TOK.line, ink: TOK.ink, bg: null };
+  if (col.bg) { ctx.fillStyle = col.bg; ctx.fillRect(0, 0, w, h); } else ctx.clearRect(0, 0, w, h);
+  const m = { l: c.ml ?? 46, r: 8, t: c.title ? 16 : 6, b: c.xlab ? 26 : 16 };
+  const pw = w - m.l - m.r, ph = h - m.t - m.b; if (pw < 20 || ph < 10) return;
+  const X = v => m.l + (v - c.x0) / (c.x1 - c.x0) * pw, Y = v => m.t + (1 - (v - c.y0) / (c.y1 - c.y0)) * ph;
+  const font = `10px ${TOK.mono || 'monospace'}`; ctx.font = font; ctx.lineWidth = 1;
+  if (c.title) { ctx.fillStyle = c.titleColor || col.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(c.title, m.l, 2); }
+  if (c.shade) { ctx.fillStyle = c.shade.color; ctx.globalAlpha = .12; const xs = X(Math.max(c.shade.from, c.x0)); if (xs < m.l + pw) ctx.fillRect(xs, m.t, m.l + pw - xs, ph); ctx.globalAlpha = 1; }
+  const yt = niceTicks(c.y0, c.y1, c.yTicks || 4), xt = niceTicks(c.x0, c.x1, c.xTicks || 5);
+  ctx.strokeStyle = col.grid; ctx.fillStyle = col.text; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (const v of yt.t) { const y = Math.round(Y(v)) + .5; ctx.globalAlpha = v === 0 ? 1 : .55; ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(m.l + pw, y); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillText(fmtTick(v, yt.step), m.l - 4, y); }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const v of xt.t) { const x = Math.round(X(v)) + .5; ctx.globalAlpha = .35; ctx.beginPath(); ctx.moveTo(x, m.t); ctx.lineTo(x, m.t + ph); ctx.stroke(); ctx.globalAlpha = 1; if (x > m.l + 10 && x < m.l + pw - 8) ctx.fillText(fmtTick(v, xt.step), x, m.t + ph + 3); }
+  if (c.xlab) { ctx.textAlign = 'right'; ctx.fillText(c.xlab, m.l + pw, m.t + ph + 14); }
+  if (c.ylab) { ctx.save(); ctx.translate(10, m.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c.ylab, 0, 0); ctx.restore(); }
+  ctx.save(); ctx.beginPath(); ctx.rect(m.l, m.t, pw, ph); ctx.clip();
+  if (c.band) { const b = c.band; ctx.fillStyle = TOK.accent; for (let i = 0; i < b.n; i++) { if (!b.y[i]) continue; ctx.globalAlpha = Math.min(.5, .14 * b.y[i]); const x = X(b.x[i]); ctx.fillRect(x, m.t + ph - 5, Math.max(1, pw / b.n + 1), 5); } ctx.globalAlpha = 1; }
+  for (const v of (c.vlines || [])) { if (v.x < c.x0 || v.x > c.x1) continue; ctx.strokeStyle = v.color; ctx.setLineDash(v.dash || [4, 3]); ctx.globalAlpha = .8; ctx.beginPath(); ctx.moveTo(X(v.x) + .5, m.t); ctx.lineTo(X(v.x) + .5, m.t + ph); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; if (v.label) { ctx.fillStyle = v.color; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText(v.label, X(v.x) + 3, m.t + 2); } }
+  for (const s of c.series) {
+    if (!s.n) continue; ctx.strokeStyle = s.color; ctx.lineWidth = s.width || 1.4; ctx.setLineDash(s.dash || []); ctx.globalAlpha = s.alpha ?? 1; ctx.beginPath();
+    const stepI = Math.max(1, Math.floor(s.n / (pw * 2)));
+    if (s.bars) { ctx.fillStyle = s.color; const bw = Math.max(1, pw / s.n * .8); for (let i = 0; i < s.n; i++) { const y0 = Y(Math.max(c.y0, 0)); const y1 = Y(s.y[i]); ctx.fillRect(X(s.x[i]) - bw / 2, Math.min(y0, y1), bw, Math.abs(y1 - y0)); } }
+    else { for (let i = 0; i < s.n; i += stepI) { const x = X(s.x[i]), y = Y(s.y[i]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke(); }
+    if (s.dots) { ctx.fillStyle = s.color; for (let i = 0; i < s.n; i++) { ctx.beginPath(); ctx.arc(X(s.x[i]), Y(s.y[i]), 3, 0, TAU); ctx.fill(); } }
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+  ctx.strokeStyle = col.grid; ctx.strokeRect(m.l + .5, m.t + .5, pw - 1, ph - 1);
+  if (c.empty) { ctx.fillStyle = col.text; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `12px ${TOK.mono}`; ctx.fillText(c.empty, m.l + pw / 2, m.t + ph / 2); }
+}
+const yRangeMem = {};
+function autoRange(key, arrs, n, sym) {
+  let mx = 1e-9, mn = 0; for (const a of arrs) for (let i = 0; i < n; i++) { if (a[i] > mx) mx = a[i]; if (a[i] < mn) mn = a[i]; }
+  let lo = Math.min(mn * 1.12, 0), hi = Math.max(mx * 1.12, 1);
+  if (sym) { const r = Math.max(Math.abs(lo), Math.abs(hi)); lo = -r; hi = r; }
+  const prev = yRangeMem[key]; if (prev) { lo = Math.min(lo, prev[0] * 0.97 + lo * 0.03); hi = Math.max(hi, prev[1] * 0.97 + hi * 0.03); }
+  yRangeMem[key] = [lo, hi]; return [lo, hi];
+}
+
+/* =====================================================================
+   MODULE 5 — 3D SCENE (Three.js). Geometry in mm, 1 scene unit = 10 mm.
+   Machine coordinates: x feed (right), y normal (into the machine), z up.
+   ===================================================================== */
+const Scene3D = (() => {
+  const U = 0.1;
+  const V3 = (x, y, z) => new THREE.Vector3(x * U, z * U, -y * U);
+  let renderer, scene, camera, controls, canvas, clip, hemi;
+  const parts = [], R = {}, M = {}, housingMats = [], labels = [];
+  const fl = { transparent: false, section: false, explode: 0, explodeT: 0, flow: false, labels: false, view: 'external', opacity: 1, opacityT: 1 };
+  const camTw = { active: false };
+  const std = o => new THREE.MeshStandardMaterial(o);
+  function mesh(geo, m, part) { const x = new THREE.Mesh(geo, m); x.castShadow = true; x.receiveShadow = true; if (part) { x.userData.part = part; parts.push(x); } return x; }
+  function box(w, d, h, m, part) { return mesh(new THREE.BoxGeometry(w * U, h * U, d * U), m, part); }
+  function cyl(r, h, m, part, seg = 32, rt) { return mesh(new THREE.CylinderGeometry((rt ?? r) * U, r * U, h * U, seg), m, part); }
+  function put(o, x, y, z) { o.position.set(x * U, z * U, -y * U); return o; }
+
+  function materials() {
+    M.paint = std({ color: 0x5e6d77, metalness: .25, roughness: .62 });
+    M.paintLight = std({ color: 0xd8dde1, metalness: .15, roughness: .6 });
+    M.table = std({ color: 0x9aa3ab, metalness: .6, roughness: .38 });
+    M.slot = std({ color: 0x23282d, metalness: .3, roughness: .8 });
+    M.steel = std({ color: 0xb6bcc3, metalness: .75, roughness: .3 });
+    M.dark = std({ color: 0x1d2328, metalness: .3, roughness: .55 });
+    M.blackOx = std({ color: 0x2b3035, metalness: .7, roughness: .4 });
+    M.housing = std({ color: 0xc4c9ce, metalness: .65, roughness: .28, side: THREE.DoubleSide, transparent: true, opacity: 1 });
+    M.top = std({ color: 0xb3b9bf, metalness: .7, roughness: .25, side: THREE.DoubleSide, transparent: true, opacity: 1 });
+    housingMats.push(M.housing, M.top);
+    M.sleeve = std({ color: 0xa8afb6, metalness: .6, roughness: .35, transparent: true, opacity: .32, side: THREE.DoubleSide, depthWrite: false });
+    M.gold = std({ color: 0xd4a537, metalness: .9, roughness: .25 });
+    M.wp = std({ color: Model.MATERIALS.al6061.color, metalness: .7, roughness: .32 });
+    M.groove = std({ color: 0x5b636b, metalness: .8, roughness: .2 });
+    M.carbide = std({ color: 0x9ea6ad, metalness: .8, roughness: .22 });
+    M.holder = std({ color: 0x6f7881, metalness: .85, roughness: .3 });
+    M.cable = std({ color: 0x2b3b48, metalness: .2, roughness: .55 });
+    M.amp = std({ color: 0xe4e7ea, metalness: .2, roughness: .5 });
+    M.daq = std({ color: 0x2f3c46, metalness: .3, roughness: .5 });
+    M.floor = std({ color: 0x9aa3a9, metalness: 0, roughness: .95 });
+    M.pulse = new THREE.MeshBasicMaterial({ color: 0x3db3bf });
+    M.flow = new THREE.MeshBasicMaterial({ color: 0xf0a020 });
+    M.chip = std({ color: 0xd8dde2, metalness: .9, roughness: .25 });
+    M.led = new THREE.MeshBasicMaterial({ color: 0x334455 });
+  }
+
+  function buildMachine() {
+    const floor = mesh(new THREE.PlaneGeometry(900, 900), M.floor); floor.rotation.x = -Math.PI / 2; floor.position.y = -69.5; floor.castShadow = false; scene.add(floor); R.floor = floor;
+    scene.add(put(box(800, 560, 640, M.paint, 'machine'), 0, 0, -375));
+    scene.add(put(box(720, 420, 55, M.table, 'table'), 0, 0, -27.5));
+    for (const yy of [-120, 0, 120]) { const s = put(box(720, 16, 1.2, M.slot), 0, yy, 0.25); s.castShadow = false; scene.add(s); }
+    for (const sx of [-1, 1]) scene.add(put(box(90, 100, 1300, M.paint, 'machine'), sx * 440, 300, -45));
+    scene.add(put(box(980, 100, 120, M.paint, 'machine'), 0, 300, 560));
+    scene.add(put(box(960, 8, 14, M.steel), 0, 247, 600)); scene.add(put(box(960, 8, 14, M.steel), 0, 247, 520));
+  }
+  function buildHead() {
+    R.carriage = new THREE.Group(); scene.add(R.carriage);
+    R.carriage.add(put(box(230, 50, 200, M.paint, 'spindle'), 0, 225, 560));
+    R.ram = box(130, 1, 100, M.paint, 'spindle'); R.carriage.add(R.ram);
+    R.head = new THREE.Group(); scene.add(R.head);
+    R.head.add(put(box(180, 180, 440, M.paint, 'spindle'), 0, 0, 404));
+    R.head.add(put(cyl(46, 40, M.steel, 'spindle'), 0, 0, 164));
+    R.rotor = new THREE.Group(); R.head.add(R.rotor);
+    R.rotor.add(put(cyl(38, 14, M.holder, 'holder'), 0, 0, 137));
+    R.rotor.add(put(cyl(24, 50, M.holder, 'holder', 32, 32), 0, 0, 105));
+    R.rotor.add(put(cyl(21, 22, M.holder, 'holder', 6), 0, 0, 70));
+    R.toolGrp = new THREE.Group(); R.rotor.add(R.toolGrp);
+    buildTool();
+  }
+  function buildTool() {
+    const g = R.toolGrp; while (g.children.length) { const c = g.children.pop(); const i = parts.indexOf(c); if (i >= 0) parts.splice(i, 1); c.traverse(o => o.geometry && o.geometry.dispose()); }
+    const Rr = P.D / 2;
+    g.add(put(cyl(Rr * 0.72, 30, M.carbide, 'tool'), 0, 0, 15));
+    g.add(put(cyl(Rr, 45, M.carbide, 'tool'), 0, 0, 52.5));
+    for (let j = 0; j < P.z; j++) {
+      const piv = new THREE.Group(); piv.rotation.y = Math.PI / 2 - j * TAU / P.z;
+      const b = box(Rr * 0.5, Math.max(1.2, P.D * 0.13), 30, M.carbide, 'tool'); b.position.set(Rr * 0.74 * U, 15 * U, 0); b.rotation.x = 0.45;
+      piv.add(b); g.add(piv);
+    }
+  }
+  function buildSensor(i) {
+    const g = new THREE.Group(); g.userData.layers = [];
+    const sl = mesh(new THREE.CylinderGeometry(9 * U, 9 * U, 15 * U, 32, 1, true), M.sleeve, 'sensor'); put(sl, 0, 0, 7.5); sl.castShadow = false; g.add(sl); g.userData.sleeve = sl;
+    const bolt = put(cyl(2.2, 15, M.steel, 'sensor', 12), 0, 0, 7.5); g.add(bolt);
+    const axisCol = { qx: 0xd8344a, qy: 0x22a05e, qz: 0x2f6bd8 };
+    const stack = [['s', 2], ['qz', 2.5], ['e', .5], ['qx', 2.5], ['e', .5], ['qy', 2.5], ['e', .5], ['s', 2]];
+    let z = 0.5;
+    stack.forEach(([kind, h], li) => {
+      let m, r = 7.6;
+      if (kind === 's') { m = M.steel; r = 8; } else if (kind === 'e') { m = M.gold; r = 7.9; }
+      else m = std({ color: axisCol[kind], transparent: true, opacity: .85, emissive: axisCol[kind], emissiveIntensity: 0, metalness: 0, roughness: .15 });
+      const d = put(cyl(r, h, m, kind[0] === 'q' ? 'quartz' : kind === 'e' ? 'electrode' : 'sensor'), 0, 0, z + h / 2);
+      d.userData.z0 = z + h / 2; d.userData.li = li; g.userData.layers.push(d); g.add(d);
+      if (kind[0] === 'q') g.userData[kind] = d; if (kind === 'e' && !g.userData.e) g.userData.e = d;
+      z += h;
+    });
+    return g;
+  }
+  function buildDyn() {
+    R.dyn = new THREE.Group(); scene.add(R.dyn);
+    R.dyn.add(put(box(170, 100, 25, M.housing, 'dynBase'), 0, 0, 12.5));
+    for (const sx of [-1, 1]) {
+      R.dyn.add(put(box(30, 100, 12, M.housing, 'dynBase'), sx * 100, 0, 6));
+      for (const sy of [-1, 1]) R.dyn.add(put(cyl(5.5, 12.4, M.slot, null, 16), sx * 100, sy * 30, 6));
+    }
+    R.dyn.add(put(box(170, 6, 15, M.housing, 'dynBase'), 0, -47, 32.5));
+    R.dyn.add(put(box(170, 6, 15, M.housing, 'dynBase'), 0, 47, 32.5));
+    for (const sx of [-1, 1]) R.dyn.add(put(box(6, 88, 15, M.housing, 'dynBase'), sx * 82, 0, 32.5));
+    const con = cyl(8, 14, M.steel, 'connector', 24); con.rotation.x = Math.PI / 2; put(con, 55, -57, 32.5); R.dyn.add(con); R.connector = con;
+    R.dyn.add(put(box(54, 1, 9, M.dark), -45, -50.6, 12.5));
+    R.topGrp = new THREE.Group(); R.dyn.add(R.topGrp);
+    R.topGrp.add(put(box(170, 100, 20, M.top, 'dynTop'), 0, 0, 50));
+    for (const sx of [-1, 1]) for (const sy of [-35, 0, 35]) R.topGrp.add(put(cyl(3, 0.8, M.slot, null, 12), sx * 76, sy, 60.1));
+    R.sensors = Model.ILLUS.sensorPos.map(([x, y], i) => { const g = buildSensor(i); put(g, x, y, 25); g.userData.base = [x, y, 25]; R.dyn.add(g); return g; });
+    R.bolts = new THREE.Group(); R.dyn.add(R.bolts);
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) { R.bolts.add(put(cyl(7, 8, M.blackOx, 'bolts', 6), sx * 100, sy * 30, 16)); R.bolts.add(put(cyl(4, 30, M.blackOx, 'bolts', 12), sx * 100, sy * 30, -3)); }
+    // workpiece & clamps ride on the top plate
+    R.wp = new THREE.Group(); R.topGrp.add(R.wp);
+    R.block = put(box(120, 80, 40, M.wp, 'workpiece'), 0, 0, 80); R.wp.add(R.block);
+    R.groove = mesh(new THREE.PlaneGeometry(U, U), M.groove); R.groove.rotation.x = -Math.PI / 2; R.groove.castShadow = false; R.groove.visible = false; R.wp.add(R.groove);
+    R.clamps = new THREE.Group(); R.wp.add(R.clamps);
+    for (const sx of [-1, 1]) { const c = new THREE.Group(); c.userData.sx = sx; c.add(put(box(26, 46, 12, M.blackOx, 'clamps'), sx * 73, 0, 66)); c.add(put(cyl(4, 18, M.steel, 'clamps', 6), sx * 78, 0, 75)); R.clamps.add(c); }
+  }
+  function canvasTex(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return { c, ctx: c.getContext('2d'), t }; }
+  function buildInstruments() {
+    scene.add(put(box(420, 320, 670, M.paintLight, 'bench'), 680, -60, -355));
+    R.amp = new THREE.Group(); scene.add(R.amp);
+    R.amp.add(put(box(240, 180, 85, M.amp, 'amp'), 600, -80, 22.5));
+    R.ampTex = canvasTex(512, 180);
+    const ap = new THREE.Mesh(new THREE.PlaneGeometry(232 * U, 78 * U), new THREE.MeshBasicMaterial({ map: R.ampTex.t, toneMapped: false })); put(ap, 600, -170.6, 22.5); ap.userData.part = 'amp'; parts.push(ap); R.amp.add(ap);
+    R.amp.add(put(box(240, 4, 6, M.dark), 600, -171, 64));
+    scene.add(put(box(140, 110, 40, M.daq, 'daq'), 820, -90, 0));
+    R.daqLeds = [0, 1, 2].map(i => { const l = new THREE.Mesh(new THREE.BoxGeometry(8 * U, 5 * U, 1 * U), M.led.clone()); put(l, 785 + i * 14, -145.6, 6); scene.add(l); return l; });
+    scene.add(put(box(120, 80, 8, M.dark, 'monitor'), 700, 70, -16));
+    scene.add(put(cyl(9, 130, M.dark, 'monitor', 16), 700, 70, 50));
+    scene.add(put(box(400, 24, 250, M.dark, 'monitor'), 700, 70, 240));
+    R.monTex = canvasTex(760, 460);
+    const sc = new THREE.Mesh(new THREE.PlaneGeometry(380 * U, 230 * U), new THREE.MeshBasicMaterial({ map: R.monTex.t, toneMapped: false })); put(sc, 700, 57.6, 240); sc.userData.part = 'monitor'; parts.push(sc); scene.add(sc);
+  }
+  function tube(pts, r) { const curve = new THREE.CatmullRomCurve3(pts.map(p => V3(...p))); const g = new THREE.TubeGeometry(curve, 220, r * U, 10, false); return { curve, g }; }
+  function buildCables() {
+    const c1 = tube([[55, -64, 32.5], [55, -84, 28], [60, -112, 6], [150, -150, 2], [300, -160, 2], [352, -162, -4], [410, -150, -14], [455, -112, 12], [481, -80, 30]], 3.5);
+    R.cable = mesh(c1.g, M.cable, 'cable'); R.cableCurve = c1.curve; R.cableCount = c1.g.index.count; c1.g.setDrawRange(0, 0); scene.add(R.cable);
+    const c2 = tube([[720, -80, 30], [738, -86, 22], [751, -90, 8]], 3); R.cable2 = mesh(c2.g, M.cable, 'cable'); R.cable2Curve = c2.curve;
+    const c3 = tube([[820, -34, 4], [800, 0, -12], [740, 40, -16], [705, 62, -12]], 2.5); R.cable3 = mesh(c3.g, M.cable, 'cable'); R.cable3Curve = c3.curve;
+    scene.add(R.cable2, R.cable3); R.cable2.visible = R.cable3.visible = false;
+    R.pulses = []; for (let i = 0; i < 10; i++) { const s = new THREE.Mesh(new THREE.SphereGeometry(5 * U, 10, 8), M.pulse); s.visible = false; scene.add(s); R.pulses.push(s); }
+    R.pulses2 = []; for (let i = 0; i < 6; i++) { const s = new THREE.Mesh(new THREE.SphereGeometry(4 * U, 10, 8), M.pulse); s.visible = false; scene.add(s); R.pulses2.push(s); }
+  }
+  function buildArrows() {
+    const mk = col => { const a = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(), 1, col, .5, .3);
+      [a.line.material, a.cone.material].forEach(m => { m.depthTest = false; m.transparent = true; }); a.renderOrder = 20; a.line.renderOrder = 20; a.cone.renderOrder = 20; a.visible = false; scene.add(a); return a; };
+    R.arrows = [mk(0xe0384e), mk(0x22a05e), mk(0x2f6bd8), mk(0xd99a10)];
+    R.flowDots = []; for (let i = 0; i < 28; i++) { const s = new THREE.Mesh(new THREE.SphereGeometry(3.2 * U, 8, 6), M.flow); s.visible = false; s.renderOrder = 15; s.material.depthTest = false; scene.add(s); R.flowDots.push(s); }
+    R.chips = []; for (let i = 0; i < 30; i++) { const c = new THREE.Mesh(new THREE.BoxGeometry(2.4 * U, .6 * U, 1.2 * U), M.chip); c.visible = false; c.userData = { v: new THREE.Vector3(), life: 0 }; scene.add(c); R.chips.push(c); }
+  }
+  function buildLabels() {
+    const host = document.getElementById('labels');
+    const add = (text, obj, off, views) => { const el = document.createElement('div'); el.className = 'lbl'; el.textContent = text; el.hidden = true; host.appendChild(el); labels.push({ el, obj, off: V3(...off), views }); };
+    const s0 = R.sensors[0].userData, A = ['transparent', 'section', 'exploded', 'sensor', 'flow'];
+    add('Top (cover) plate · 170 × 100 mm', R.topGrp.children[0], [85, -50, 10], A);
+    add('Base plate with clamping flanges', R.dyn.children[0], [-85, -50, 0], A);
+    add('Quartz shear plate → Fx', s0.qx, [8, -8, 0], ['exploded', 'sensor']);
+    add('Quartz shear plate → Fy', s0.qy, [8, -8, 2], ['exploded', 'sensor']);
+    add('Quartz compression plate → Fz', s0.qz, [8, -8, -2], ['section', 'exploded', 'sensor']);
+    add('Electrodes (charge pick-up)', s0.e, [-8, -8, 0], ['exploded', 'sensor']);
+    add('Preload sleeve / bolt', s0.sleeve, [-9, -6, 6], ['exploded', 'sensor']);
+    add('Signal output connector', R.connector, [0, -8, 0], A);
+    add('Workpiece', R.block, [-60, -40, 20], ['flow', 'exploded']);
+  }
+  function init(cv) {
+    canvas = cv;
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.localClippingEnabled = true;
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(32, 1, 0.5, 2500);
+    controls = new THREE.OrbitControls(camera, canvas);
+    controls.enableDamping = true; controls.dampingFactor = .08; controls.screenSpacePanning = true; controls.maxPolarAngle = Math.PI * .495; controls.minDistance = 3; controls.maxDistance = 450;
+    hemi = new THREE.HemisphereLight(0xffffff, 0x50585f, .85); scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.05); sun.position.set(55, 120, 85); sun.target.position.set(10, 0, 0);
+    sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -95, right: 95, top: 95, bottom: -95, near: 1, far: 400 }); sun.shadow.bias = -0.0006;
+    scene.add(sun, sun.target);
+    const fill = new THREE.DirectionalLight(0xdfe8ff, .4); fill.position.set(-80, 50, -40); scene.add(fill);
+    materials(); buildMachine(); buildDyn(); buildHead(); buildInstruments(); buildCables(); buildArrows(); buildLabels();
+    clip = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0);
+    setTheme(); camTo('iso', 0);
+  }
+  function setTheme() { if (!scene) return; readTokens(); scene.background = new THREE.Color(TOK.scene || '#d9e0e6'); M.floor.color.set(TOK.floor || '#a0a8ae'); scene.fog = new THREE.Fog(scene.background, 220, 520); }
+  function resize(w, h) { if (!renderer) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+
+  const CAMS = {
+    iso: [[120, -20, 50], [760, -1000, 640]], front: [[200, 0, 120], [200, -1650, 250]], top: [[220, 0, 0], [220, -40, 1900]],
+    dyn: [[0, 0, 50], [330, -440, 330]], sensor: [[60, -30, 32], [190, -240, 120]], chain: [[400, -60, 60], [560, -1320, 640]], monitor: [[700, 40, 200], [720, -470, 330]]
+  };
+  function camTo(name, dur = 1.1) {
+    const c = CAMS[name]; if (!c) return Promise.resolve();
+    let tgt = V3(...c[0]), pos = V3(...c[1]);
+    if (name === 'dyn' && R.dyn) { const dy = R.dyn.position.y; tgt.y += dy; pos.y += dy; }
+    if (name === 'sensor') { const wp = new THREE.Vector3(); R.sensors[0].getWorldPosition(wp); const d = pos.clone().sub(tgt); tgt = wp.add(new THREE.Vector3(0, .8, 0)); pos = tgt.clone().add(d); }
+    if (!dur) { camera.position.copy(pos); controls.target.copy(tgt); controls.update(); return Promise.resolve(); }
+    const p0 = camera.position.clone(), t0 = controls.target.clone();
+    return Tw.add(dur, k => { camera.position.lerpVectors(p0, pos, k); controls.target.lerpVectors(t0, tgt, k); });
+  }
+  function setView(v) {
+    fl.view = v;
+    fl.transparent = ['transparent', 'sensor', 'flow'].includes(v);
+    fl.section = ['section', 'sensor'].includes(v);
+    fl.explodeT = v === 'exploded' ? 1 : 0;
+    fl.flow = v === 'flow';
+    fl.labels = v !== 'external';
+    fl.opacityT = fl.transparent ? .16 : 1;
+    housingMats.forEach(m => { m.clippingPlanes = fl.section ? [clip] : []; m.needsUpdate = true; });
+    M.wp.transparent = v === 'flow'; M.wp.opacity = v === 'flow' ? .45 : 1; M.wp.depthWrite = v !== 'flow'; M.wp.needsUpdate = true;
+    if (v === 'sensor') camTo('sensor');
+  }
+  function setWorkpieceMaterial() { M.wp.color.setHex(Model.MATERIALS[P.mat].color); }
+  function setAmp(on) { R.cable2.visible = R.cable3.visible = on; }
+  function setCable(k) { R.cable.geometry.setDrawRange(0, Math.floor(R.cableCount * k / 3) * 3); R.cableK = k; }
+
+  // per-sensor vertical reactions from force and moment balance (educational)
+  function sensorLoads(Fw, S) {
+    const a = Model.ILLUS.sensorA, b = Model.ILLUS.sensorB, px = S.xc, py = S.yc, pz = (100 - P.ap / 2) - 32.5;
+    const Mx = py * Fw[2] - pz * Fw[1], My = pz * Fw[0] - px * Fw[2];
+    return Model.ILLUS.sensorPos.map(([xi, yi]) => ({ fx: Fw[0] / 4, fy: Fw[1] / 4, fz: Fw[2] / 4 + Mx * yi / (4 * b * b) - My * xi / (4 * a * a) }));
+  }
+  let drawTimer = 0; const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3();
+  function update(dt, St) {
+    const S = Sim.S;
+    // explode/opacity easing
+    fl.explode += (fl.explodeT - fl.explode) * Math.min(1, dt * 5);
+    fl.opacity += (fl.opacityT - fl.opacity) * Math.min(1, dt * 6);
+    housingMats.forEach(m => { m.opacity = fl.opacity; m.depthWrite = fl.opacity > .95; });
+    const ex = fl.explode;
+    // head
+    R.carriage.position.x = S.xc * U;
+    const L = Math.max(10, 110 - S.yc); R.ram.scale.z = L; put(R.ram, 0, (200 + S.yc + 90) / 2, 560);
+    put(R.head, S.xc, S.yc, S.ztip);
+    R.rotor.rotation.y = -S.theta;
+    // deflection (exaggerated) of top plate
+    const exg = P.exag / 1000; // µm -> mm then × exaggeration
+    const F = S.Fs;
+    const dx = F[0] / Model.SPEC.kx * exg, dy = F[1] / Model.SPEC.ky * exg, dz = F[2] / Model.ILLUS.kz * exg;
+    put(R.topGrp, dx, dy, dz + 70 * ex);
+    R.wp.position.y = (St.wpLift + 55 * ex) * U;
+    R.bolts.position.y = (St.boltLift + 45 * ex) * U;
+    R.clamps.children.forEach(c => { c.position.x = c.userData.sx * St.clampOut * U; });
+    R.clamps.visible = St.clampOut < 119; R.bolts.visible = St.boltsVis; R.wp.visible = St.wpVis; R.toolGrp.visible = St.toolVis;
+    R.toolGrp.position.y = St.toolDrop * U;
+    R.dyn.position.y = St.dynLift * U;
+    // sensors
+    const loads = sensorLoads(S.Fs, S); St.loads = loads;
+    R.sensors.forEach((g, i) => {
+      const b = g.userData.base; put(g, b[0], b[1], b[2] + 28 * ex);
+      g.userData.layers.forEach(d => { d.position.y = (d.userData.z0 + d.userData.li * 3.2 * ex) * U; });
+      const L = loads[i];
+      g.userData.qz.material.emissiveIntensity = Math.min(1.4, Math.abs(L.fz) / 250);
+      g.userData.qx.material.emissiveIntensity = Math.min(1.4, Math.abs(L.fx) / 150);
+      g.userData.qy.material.emissiveIntensity = Math.min(1.4, Math.abs(L.fy) / 150);
+      const comp = Math.max(-.35, Math.min(.35, -L.fz / (Model.ILLUS.kz / 4) * exg / 2.5));
+      g.userData.qz.scale.y = 1 + comp;
+    });
+    // groove (machined area)
+    const Rr = P.D / 2, xcut = Math.min(S.xc, WP.x1);
+    if (St.cutStarted && S.atDepth && xcut > WP.x0) {
+      const y0 = Math.max(S.yc - Rr, WP.y0), y1 = Math.min(S.yc + Rr, WP.y1);
+      R.groove.visible = y1 > y0; R.groove.scale.set(xcut - WP.x0, y1 - y0, 1); put(R.groove, (WP.x0 + xcut) / 2, (y0 + y1) / 2, 100.25);
+    } else if (!St.cutStarted) R.groove.visible = false;
+    // force vectors (force on workpiece at the tool contact)
+    const cutting = S.spindle && S.atDepth && S.nEng > 0;
+    const origin = V3(S.xc, S.yc, 100 - P.ap / 2);
+    const Fr = Math.hypot(F[0], F[1], F[2]);
+    const comps = [V3(F[0], 0, 0), V3(0, F[1], 0), V3(0, 0, F[2]), V3(F[0], F[1], F[2])];
+    R.arrows.forEach((a, i) => {
+      const v = comps[i], mag = v.length() / U; // newtons
+      a.visible = P.vectors && St.acq && mag > 2 && !(i === 3 && !cutting);
+      if (!a.visible) return;
+      const len = Math.min(9, 0.6 + mag / 90); a.position.copy(origin); a.setDirection(v.normalize()); a.setLength(len, Math.min(1.1, len * .28), Math.min(.6, len * .16));
+    });
+    // force path particles
+    const tt = performance.now() / 1000;
+    if (fl.flow) {
+      const con = new THREE.Vector3(); R.connector.getWorldPosition(con);
+      R.flowDots.forEach((d, i) => {
+        const si = i % 4, ph = ((tt * 0.45) + Math.floor(i / 4) / 7) % 1;
+        const sp = new THREE.Vector3(); R.sensors[si].getWorldPosition(sp); sp.y += .7;
+        if (ph < .6) d.position.lerpVectors(origin, sp, ph / .6); else d.position.lerpVectors(sp, con, (ph - .6) / .4);
+        d.visible = true; const s = .6 + Math.min(1.2, Fr / 600); d.scale.setScalar(s);
+      });
+    } else R.flowDots.forEach(d => d.visible = false);
+    // cable pulses
+    const live = St.acq && St.cableK >= 1;
+    R.pulses.forEach((p, i) => { p.visible = live && St.ampOn; if (!p.visible) return; const k = ((tt * (cutting ? .55 : .18)) + i / R.pulses.length) % 1; p.position.copy(R.cableCurve.getPointAt(k)); p.scale.setScalar(cutting ? 1 + Math.min(1, Fr / 800) : .6); });
+    R.pulses2.forEach((p, i) => { p.visible = live && St.ampOn; if (!p.visible) return; const k = ((tt * .7) + i / R.pulses2.length) % 1; const cv = i % 2 ? R.cable3Curve : R.cable2Curve; p.position.copy(cv.getPointAt(k)); });
+    R.daqLeds.forEach((l, i) => { l.material.color.setHex(!St.ampOn ? 0x334455 : (i === 0 ? 0x2fd17a : (i === 1 ? ((tt * 4 | 0) % 2 && St.acq ? 0x3db3bf : 0x1b4a52) : (S.satT > 0 ? 0xff4040 : 0x2a3138)))); });
+    // chips
+    R.chips.forEach(c => {
+      const u = c.userData;
+      if (u.life <= 0 && cutting && Math.random() < .25 * P.timeScale * 10) {
+        u.life = .7 + Math.random() * .5; const ang = -S.theta + Math.random() * 1.2;
+        c.position.copy(origin).add(new THREE.Vector3(Math.cos(ang) * Rr * U, .2, Math.sin(ang) * Rr * U));
+        u.v.set(Math.cos(ang) * (3 + Math.random() * 4), 2 + Math.random() * 4, Math.sin(ang) * (3 + Math.random() * 4)); c.visible = true;
+      }
+      if (u.life > 0) { u.life -= dt; u.v.y -= 14 * dt; c.position.addScaledVector(u.v, dt); c.rotation.x += dt * 9; c.rotation.y += dt * 7; if (u.life <= 0 || c.position.y < 0) { c.visible = false; u.life = 0; } }
+    });
+    // labels
+    labels.forEach(l => {
+      const show = fl.labels && l.views.includes(fl.view) && l.obj.visible !== false;
+      if (!show) { l.el.hidden = true; return; }
+      l.obj.getWorldPosition(tmpV); tmpV.add(l.off); tmpV2.copy(tmpV).project(camera);
+      if (tmpV2.z > 1) { l.el.hidden = true; return; }
+      const w = canvas.clientWidth, h = canvas.clientHeight; l.el.hidden = false;
+      l.el.style.transform = `translate(${(tmpV2.x * .5 + .5) * w}px, ${(-tmpV2.y * .5 + .5) * h}px) translate(4px,-50%)`;
+    });
+    // instrument screens
+    drawTimer -= dt; if (drawTimer <= 0) { drawTimer = .1; drawAmpPanel(St); drawMonitor(St); }
+    controls.update(); renderer.render(scene, camera);
+  }
+  function drawAmpPanel(St) {
+    const { ctx, c, t } = R.ampTex, S = Sim.S; const w = c.width, h = c.height;
+    ctx.fillStyle = '#20272e'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#c8102e'; ctx.fillRect(0, 0, 8, h);
+    ctx.fillStyle = '#e8ecef'; ctx.font = '600 17px monospace'; ctx.textBaseline = 'top'; ctx.fillText('CHARGE AMPLIFIER · 3 CH', 20, 10);
+    ctx.font = '12px monospace'; ctx.fillStyle = '#90a0ad'; ctx.fillText('educational model', 330, 14);
+    const names = ['Fx', 'Fy', 'Fz'], Sx = Model.SPEC.S;
+    for (let i = 0; i < 3; i++) {
+      const y = 44 + i * 42; const on = St.ampOn, zero = Chain.st.zeroed && !P.unzeroed;
+      ctx.fillStyle = !on ? '#3a444d' : zero ? '#2fd17a' : '#e8a33a'; ctx.beginPath(); ctx.arc(28, y + 12, 7, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#cfd8df'; ctx.font = '600 15px monospace'; ctx.fillText(`CH${i + 1} ${names[i]}`, 44, y + 3);
+      ctx.font = '12px monospace'; ctx.fillStyle = '#90a0ad'; ctx.fillText(`S ${Sx[i].toFixed(2)} pC/N  ${P.scale} N/V`, 132, y + 6);
+      ctx.fillStyle = '#0b0f12'; ctx.fillRect(350, y, 145, 26);
+      ctx.fillStyle = on ? '#6cf0a8' : '#2c3a34'; ctx.font = '600 17px monospace'; ctx.textAlign = 'right';
+      ctx.fillText(on ? (S.V[i] >= 0 ? '+' : '') + S.V[i].toFixed(3) + ' V' : '---', 488, y + 4); ctx.textAlign = 'left';
+    }
+    t.needsUpdate = true;
+  }
+  function drawMonitor(St) {
+    const { ctx, c, t } = R.monTex, w = c.width, h = c.height;
+    ctx.fillStyle = '#0d1418'; ctx.fillRect(0, 0, w, h);
+    if (!St.ampOn) { ctx.fillStyle = '#3b4a54'; ctx.font = '600 30px monospace'; ctx.textAlign = 'center'; ctx.fillText('NO SIGNAL', w / 2, h / 2); ctx.textAlign = 'left'; t.needsUpdate = true; return; }
+    ctx.fillStyle = '#9fb2bf'; ctx.font = '600 20px monospace'; ctx.textBaseline = 'top'; ctx.fillText('Force acquisition · simulated', 18, 12);
+    ctx.font = '15px monospace'; ctx.fillStyle = '#6f8593'; ctx.fillText(`fs ${P.fs / 1000} kHz   fc ${P.fc} Hz   t ${(Sim.S.t - Sim.S.t0).toFixed(3)} s`, 18, 40);
+    const win = Buf.window(plotWindow());
+    const [lo, hi] = autoRange('mon', [win.fx, win.fy, win.fz], win.n, true);
+    ctx.save(); ctx.translate(0, 64);
+    drawPlot(ctx, w, h - 64, { x0: win.n ? win.t[0] : 0, x1: win.n ? Math.max(win.t[win.n - 1], win.t[0] + 1e-4) : 1, y0: lo, y1: hi, ml: 60,
+      colors: { text: '#6f8593', grid: '#24323b', ink: '#cfd8df', bg: '#0d1418' },
+      series: [{ x: win.t, y: win.fx, n: win.n, color: '#ff6b7c', width: 2 }, { x: win.t, y: win.fy, n: win.n, color: '#4cd18a', width: 2 }, { x: win.t, y: win.fz, n: win.n, color: '#71a4ff', width: 2 }] });
+    ctx.restore();
+    t.needsUpdate = true;
+  }
+  function pick(clientX, clientY) {
+    const r = canvas.getBoundingClientRect(); const v = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    const rc = new THREE.Raycaster(); rc.setFromCamera(v, camera);
+    const hits = rc.intersectObjects(parts, false).filter(h => { let o = h.object; while (o) { if (!o.visible) return false; o = o.parent; } return true; });
+    if (!hits.length) return null;
+    if (fl.section) { const h = hits.find(h => !(housingMats.includes(h.object.material) && h.point.z > 0)); return h ? h.object.userData.part : null; }
+    return hits[0].object.userData.part;
+  }
+  return { init, resize, update, setView, camTo, setTheme, buildTool, setWorkpieceMaterial, setAmp, setCable, pick, sensorLoads, get fl() { return fl; } };
+})();
+
+/* ---------- tween helper ---------- */
+const Tw = {
+  list: [],
+  add(dur, fn) { return new Promise(res => this.list.push({ t: 0, dur, fn, res })); },
+  update(dt) { for (const a of [...this.list]) { a.t += dt; const k = Math.min(1, a.t / a.dur); const e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; a.fn(e); if (k >= 1) { this.list.splice(this.list.indexOf(a), 1); a.res(); } } }
+};
+function plotWindow() { const S = Sim.S; return S.spindle ? Math.max(3 / Math.max(S.k.fsp, 1), 0.012) : 0.2; }
+
+/* =====================================================================
+   MODULE 6 — CONTENT: component notes, constants, sources
+   ===================================================================== */
+const SOURCES = [
+  { id: 'K', text: 'Kistler, product page “Multicomponent dynamometer, 5 kN, cover plate 100x170 mm / 9257B”, item 18007542.', url: 'https://www.kistler.com/CH/en/p/multicomponent-dynamometers-9257b/000000000018007542' },
+  { id: 'Alt', text: 'Y. Altintas, Manufacturing Automation: Metal Cutting Mechanics, Machine Tool Vibrations, and CNC Design, 2nd ed., Cambridge University Press, 2012 (Ch. 2: mechanics of milling, cutting force coefficients).' },
+  { id: 'IEEE', text: 'IEEE Std 176-1987, IEEE Standard on Piezoelectricity (quartz piezoelectric coefficient d11 ≈ 2.3 pC/N).' },
+  { id: 'DSP', text: 'Standard signal-processing results: Nyquist–Shannon sampling theorem; second-order (Butterworth) low-pass filter; bilinear-transform biquad.' },
+  { id: 'Sim', text: 'Educational assumption chosen for this simulator. Not measured, not manufacturer data.' }
+];
+const CONSTS = [
+  ['Cover plate size', 'L × W', '170 × 100 mm', 'A', 'K'],
+  ['Measuring range Fx, Fy', '', '−5 … +5 kN', 'A', 'K'],
+  ['Measuring range Fz', '', '−5 … +10 kN', 'A', 'K'],
+  ['Sensitivity x, y', 'Sx, Sy', '−7.5 pC/N (nominal)', 'A', 'K'],
+  ['Sensitivity z', 'Sz', '−3.7 pC/N (nominal)', 'A', 'K'],
+  ['Natural frequency (sensor, free)', 'fn x,y,z', '3.5 kHz', 'A', 'K'],
+  ['Stiffness x, y', 'Cx, Cy', '1 kN/µm', 'A', 'K'],
+  ['Connector', '', 'Fischer 9-pin flange', 'A', 'K'],
+  ['Sensors preloaded', '', 'Yes', 'A', 'K'],
+  ['Spindle speed', 'N', 'N = 1000·Vc/(π·D)', 'B', 'Alt'],
+  ['Feed rate', 'Vf', 'Vf = N·z·fz', 'B', 'Alt'],
+  ['Chip thickness', 'h(φ)', 'h = fz·sin φ', 'B', 'Alt'],
+  ['Mechanistic force model', 'dFt, dFr, dFa', 'dF = (Kc·h + Ke)·dz', 'B', 'Alt'],
+  ['Al7050-T7451 coefficients (used as Al6061 proxy)', 'Ktc, Krc, Kac', '796, 168.8, 222 N/mm²', 'B', 'Alt'],
+  ['Al7050-T7451 edge coefficients', 'Kte, Kre, Kae', '27.7, 30.8, 1.8 N/mm', 'B', 'Alt'],
+  ['Quartz piezoelectric coefficient', 'd11', '≈ 2.3 pC/N', 'B', 'IEEE'],
+  ['Ideal charge amplifier', 'Vout', 'Vout = −Q / Cf', 'B', 'DSP'],
+  ['Sampling theorem', 'fs', 'fs > 2·fmax', 'B', 'DSP'],
+  ['Use of Al7050 data for Al6061', '', 'proxy, uncalibrated', 'C', 'Sim'],
+  ['Mild steel coefficients', 'Ktc, Krc, Kac / Kte, Kre, Kae', '2100, 800, 450 / 40, 50, 3', 'C', 'Sim'],
+  ['316L coefficients', 'Ktc, Krc, Kac / Kte, Kre, Kae', '2700, 1050, 600 / 50, 65, 4', 'C', 'Sim'],
+  ['Helix angle of end mill', 'β', '30°', 'C', 'Sim'],
+  ['Axial discretisation', '', '8 discs', 'C', 'Sim'],
+  ['Dynamometer height, sensor positions', '', '60 mm; (±60, ±30) mm', 'C', 'Sim'],
+  ['Stiffness z', 'Cz', '2 kN/µm (not taken from data sheet)', 'C', 'Sim'],
+  ['Mounted natural frequency', 'fn,mounted', 'adjustable, default 3.5 kHz; real mounted value is lower', 'C', 'Sim'],
+  ['Damping ratio', 'ζ', '0.03', 'C', 'Sim'],
+  ['Crosstalk matrix (off-diagonal)', 'C', '≤ 1.5 %', 'C', 'Sim'],
+  ['Residual charge before reset', 'Q0', '+180, −120, +260 pC', 'C', 'Sim'],
+  ['Drift rate (exaggerated for visibility)', 'dQ/dt', '6, −5, 7 pC/s', 'C', 'Sim'],
+  ['Broadband noise', 'σQ', '40 pC rms at 100 kHz internal rate', 'C', 'Sim'],
+  ['ADC', '', '16 bit, ±10 V', 'C', 'Sim'],
+  ['Workpiece size', '', '120 × 80 × 40 mm', 'C', 'Sim'],
+  ['Visual feed compression', '', '×10 tool travel; chip thickness unchanged', 'C', 'Sim']
+];
+const INFO = {
+  machine: ['Machine structure', 'B', 'Gantry-type vertical milling machine (illustrative). The machine structure carries the spindle; its own vibration modes can appear in force signals when they are excited by tooth passing.'],
+  table: ['Machine table with T-slots', 'B', 'The dynamometer is bolted to the table through its base flanges using T-slot nuts. Flat, clean contact faces and correct bolt torque keep the mounted system stiff, which keeps the mounted natural frequency high.'],
+  spindle: ['Spindle head', 'B', 'Rotates the tool at N = 1000·Vc/(π·D). Each tooth passage produces one force pulse, so the fundamental excitation is the tooth-passing frequency f_TP = N·z/60.'],
+  holder: ['Tool holder (collet chuck)', 'B', 'Clamps the shank. Holder run-out makes teeth cut unequal chips, which shows as a once-per-revolution component (N/60) in the force spectrum. This model assumes zero run-out.'],
+  tool: ['End mill', 'C', 'Modelled as a helical end mill (helix 30°, illustrative) discretised into axial discs. Each disc of each tooth contributes tangential, radial and axial forces proportional to its instantaneous chip thickness h = fz·sin φ.'],
+  workpiece: ['Workpiece', 'B', 'Receives the cutting force. The dynamometer measures the force on the workpiece, which is equal and opposite to the force on the tool. Workpiece and fixture mass add to the top-plate mass and lower the mounted natural frequency.'],
+  clamps: ['Workpiece clamps', 'B', 'Clamp the workpiece to the cover plate. The clamps must transmit the full cutting force without slip; any slip or rocking appears as non-linear, distorted force signals.'],
+  dynTop: ['Cover (top) plate · 170 × 100 mm', 'A', 'The force-introduction plate. It rests on four preloaded three-component sensors. Plate size 170 × 100 mm and the ±5 kN range for Fx, Fy (−5…+10 kN for Fz) are from the Kistler 9257B product page.'],
+  dynBase: ['Base plate and housing', 'C', 'Carries the sensors and the clamping flanges. Geometry here (60 mm height, flange shape) is illustrative, not taken from a drawing. In the real instrument the sensors are mounted under high preload between base and cover plate.'],
+  sensor: ['Three-component quartz sensor (educational representation)', 'C', 'Each sensor contains quartz rings: one cut for the longitudinal effect (responds to compression, Fz) and two cut for the shear effect (respond to Fx and Fy). A preload sleeve/bolt clamps the stack so shear forces are transmitted by friction and the response is linear. Internal dimensions shown are illustrative.'],
+  quartz: ['Quartz element', 'B', 'Mechanical stress displaces the charge centres of the quartz lattice, so a charge Q appears on the faces: Q ≈ d11·F for a single plate (d11 ≈ 2.3 pC/N). Several plates are stacked and connected in parallel, and four sensors are summed, which gives the much larger dynamometer sensitivity (e.g. −7.5 pC/N in x).'],
+  electrode: ['Electrodes', 'B', 'Thin metal electrodes between quartz plates collect the charge. Charges from corresponding plates of all four sensors are combined so each output channel carries one force component.'],
+  bolts: ['Mounting bolts', 'B', 'Fix the base flanges to the table. Loose bolts reduce stiffness and the natural frequency, and can cause signal distortion.'],
+  connector: ['Signal connector', 'A', 'Fischer 9-pin flange connector (Kistler 9257B product page). A low-noise, high-insulation cable links it to the charge amplifier; consult the data sheet for the exact channel assignment.'],
+  cable: ['High-insulation signal cable', 'B', 'Carries charge, not voltage. Cable insulation resistance and movement (triboelectric noise) affect the signal, so cables are fixed and kept clean and dry.'],
+  amp: ['Charge amplifier (illustrative)', 'B', 'An integrating amplifier with feedback capacitor Cf converts charge to voltage, ideally Vout = −Q/Cf, largely independent of cable capacitance. The operator enters the sensor sensitivity (pC/N) and a range (N/V). “Reset” discharges Cf, which zeroes the output before a measurement.'],
+  daq: ['Data acquisition (DAQ)', 'B', 'Anti-alias filtering and A/D conversion. Sampling rate must be well above twice the highest frequency of interest, and the low-pass cutoff must be below fs/2 to prevent aliasing.'],
+  monitor: ['Computer display', 'C', 'Shows the converted force signals. In this simulator every value is generated by the model; nothing here is an experimental measurement.'],
+  bench: ['Instrument trolley', 'C', 'Holds the measurement electronics close to the machine to keep cables short.'],
+  charge: ['Electrical charge', 'B', 'The quartz output is a charge in picocoulombs, proportional to force: Q = S·F. For Fz with S = −3.7 pC/N, 1000 N gives about −3700 pC.'],
+  sensors4: ['Four sensors in parallel', 'B', 'The cover plate rests on four sensors. Each force component is the sum of the corresponding outputs of all sensors, so the reading does not depend on where on the plate the force acts (within the specified area). Differences between sensors carry moment information.']
+};
+const CHAIN = [
+  ['tool', 'Cutting tool', 'force on tool', 'mech'], ['workpiece', 'Workpiece', 'F_wp = −F_tool', 'mech'], ['dynTop', 'Dynamometer', 'elastic structure', 'mech'],
+  ['sensors4', 'Quartz sensors', 'stress in quartz', 'mech'], ['charge', 'Charge', 'Q = S·F (pC)', 'elec'], ['amp', 'Charge amp', 'V = −Q/Cf', 'elec'],
+  ['daq', 'Acquisition', 'filter, A/D', 'elec'], ['monitor', 'Computer', 'F = V·range', 'elec']
+];
+
+/* =====================================================================
+   MODULE 7 — USER INTERFACE: procedure, controls, dashboard
+   ===================================================================== */
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const St = { mode: 'guided', g: 0, busy: false, mounted: false, clamped: false, tool: false, cabled: false, ampOn: false, paramsSet: false,
+  wpLift: 260, clampOut: 120, boltLift: 60, boltsVis: false, wpVis: true, toolVis: false, toolDrop: -90, dynLift: 230,
+  cableK: 0, acq: false, cutStarted: false, loads: null, ok3d: true };
+const fmt = (v, d = 1) => (Math.abs(v) < 0.5 * 10 ** -d ? 0 : v).toFixed(d);
+function toast(msg, ms = 2600) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, ms); }
+function info(key) {
+  const d = INFO[key]; if (!d) return;
+  $('#infoBody').innerHTML = `<h3>${d[0]}</h3><p>${d[2]}</p><p style="margin:0"><span class="cat ${d[1]}">${d[1]}</span> <span class="muted" style="font-size:12px">${{ A: 'Verified manufacturer specification', B: 'Engineering principle / referenced', C: 'Educational representation or assumption' }[d[1]]}</span></p>`;
+  $('#info').hidden = false;
+}
+$('#infoX').onclick = () => $('#info').hidden = true;
+
+/* ---- procedure steps ---- */
+const STEPS = [
+  { t: 'Inspect the dynamometer', note: `<h3>1 · Inspect</h3><p>Check the cover plate and connector for damage, chips and coolant. Confirm the instrument and its calibration sheet match.</p><ul><li>Type: 9257B-type three-component dynamometer</li><li>Cover plate 170 × 100 mm <span class="cat A">A</span></li><li>Range Fx, Fy ±5 kN; Fz −5…+10 kN <span class="cat A">A</span></li><li>Sensitivity −7.5 / −7.5 / −3.7 pC/N <span class="cat A">A</span></li><li>Natural frequency ≈ 3.5 kHz (free) <span class="cat A">A</span></li></ul>`,
+    run: async () => { stopCut(); Scene3D.setView('transparent'); markView('transparent'); await Scene3D.camTo('dyn', 1.2); await Tw.add(1.4, () => {}); Scene3D.setView('external'); markView('external'); } },
+  { t: 'Mount the dynamometer', note: `<h3>2 · Mount</h3><p>Place the dynamometer on a clean, flat table area and bolt the base flanges with T-slot nuts. A stiff, flat joint keeps the mounted natural frequency high. Never apply load through the connector.</p>`,
+    run: async () => { stopCut(); St.dynLift = 230; St.boltsVis = false; await Tw.add(1.6, k => St.dynLift = 230 * (1 - k)); St.boltsVis = true; St.boltLift = 60; await Tw.add(1.0, k => St.boltLift = 60 * (1 - k)); St.mounted = true; } },
+  { t: 'Clamp the workpiece', note: `<h3>3 · Clamp</h3><p>Clamp the workpiece to the cover plate. The force must pass from the workpiece into the plate without slip. Note that workpiece and fixture mass lower the natural frequency of the system.</p>`,
+    run: async () => { stopCut(); St.wpVis = true; St.wpLift = 260; St.clampOut = 120; await Tw.add(1.4, k => St.wpLift = 260 * (1 - k)); await Tw.add(.9, k => St.clampOut = 120 * (1 - k)); St.clamped = true; } },
+  { t: 'Install the cutting tool', note: `<h3>4 · Install tool</h3><p>Insert the end mill in the collet chuck and set the gauge length. Run-out between teeth would add a once-per-revolution component to the force signal.</p>`,
+    run: async () => { stopCut(); St.toolVis = true; St.toolDrop = -90; await Scene3D.camTo('iso', .8); await Tw.add(1.3, k => St.toolDrop = -90 * (1 - k)); St.tool = true; } },
+  { t: 'Connect sensor cables', note: `<h3>5 · Connect</h3><p>Connect the high-insulation cable from the connector to the charge amplifier. Keep connectors clean and dry; moisture lowers insulation resistance and causes drift. Fix the cable so it cannot move during cutting.</p>`,
+    run: async () => { await Tw.add(1.6, k => { St.cableK = k; Scene3D.setCable(k); }); St.cabled = true; } },
+  { t: 'Configure the charge amplifier', note: `<h3>6 · Configure amplifier</h3><p>Enter each channel’s sensitivity from the calibration sheet (nominal −7.5, −7.5, −3.7 pC/N) and choose a range in N/V so the expected peak force stays inside ±10 V. The panel on the amplifier shows the settings.</p>`,
+    run: async () => { St.ampOn = true; Scene3D.setAmp(true); startAcq(); Scene3D.camTo('chain', 1.2); showTab('params'); await Tw.add(1.2, () => {}); } },
+  { t: 'Set cutting parameters', note: `<h3>7 · Parameters</h3><p>Choose material, tool, Vc, fz, ap and ae in the parameter panel below. The head moves to the start position at the chosen depth. Check the derived spindle speed, tooth-passing frequency and maximum chip thickness.</p>`,
+    run: async () => { showTab('params'); await moveHeadToStart(1.6); St.paramsSet = true; } },
+  { t: 'Zero the measurement system', note: `<h3>8 · Reset / zero</h3><p>Press reset just before cutting. It discharges the amplifier feedback capacitor and removes residual charge from clamping and temperature change. Watch the readouts drop from an offset to zero ± noise.</p>`,
+    run: async () => { Chain.zero(); Sim.S.t0 = Sim.S.t; Buf.clear(); toast('Amplifier reset: outputs zeroed'); await Tw.add(.6, () => {}); } },
+  { t: 'Start machining', note: `<h3>9 · Machine</h3><p>The spindle starts and the tool feeds through the workpiece. Playback is slowed (see playback speed) and the tool travel is visually compressed; chip thickness and forces follow the real fz.</p>`,
+    run: async () => { await startCut(); } },
+  { t: 'Observe force signals', note: `<h3>10 · Observe</h3><p>Note the periodic force pulses: one per tooth. Compare Fx, Fy and Fz, and watch the tool-engagement strip at the bottom of each plot. Switch the anatomy view to “Force path” to see the load travelling into the sensors.</p>`,
+    run: async () => { P.vectors = true; $('#tVec').checked = true; $('#plotCard').classList.remove('pulse-hi'); void $('#plotCard').offsetWidth; $('#plotCard').classList.add('pulse-hi'); await Scene3D.camTo('iso', 1); } },
+  { t: 'Analyse cutting forces', note: `<h3>11 · Analyse</h3><p>The Analysis tab reports mean, peak and RMS forces, the amplitude spectrum and an automatic interpretation. Check that the dominant frequency equals N·z/60.</p>`,
+    run: async () => { showTab('analysis'); refreshAnalysis(true); $('#tabs').scrollIntoView({ behavior: 'smooth', block: 'start' }); } },
+  { t: 'Export measurement results', note: `<h3>12 · Export</h3><p>Export the raw sampled signals as CSV for processing in MATLAB, Python or Excel. Record the setup with the data: material, tool, cutting parameters, sensitivities, range, fs and fc.</p>`,
+    run: async () => { exportRaw(); } },
+  { t: 'Reset experiment', note: `<h3>13 · Reset</h3><p>Stop the spindle, return the head and reset the setup for the next trial.</p>`,
+    run: async () => { resetAll(St.mode); } }
+];
+function renderSteps() {
+  const ol = $('#stepList'); ol.innerHTML = '';
+  STEPS.forEach((s, i) => {
+    const li = document.createElement('li'); const b = document.createElement('button'); b.className = 'step'; b.id = 'step' + i;
+    b.innerHTML = `<span class="n">${i + 1}</span><span>${s.t}</span>`;
+    const guided = St.mode === 'guided';
+    if (guided) { if (i < St.g) b.classList.add('done'); if (i === St.g) b.classList.add('current'); b.disabled = St.busy || i !== St.g; }
+    else b.disabled = St.busy;
+    b.onclick = () => runStep(i); li.appendChild(b); ol.appendChild(li);
+  });
+  $('#stepsTitle').textContent = St.mode === 'guided' ? `Operating procedure · step ${Math.min(St.g + 1, 13)} of 13` : 'Operating procedure · any order';
+}
+async function runStep(i) {
+  if (St.busy) return;
+  if (St.mode !== 'guided' && i >= 8 && i <= 10 && !(St.mounted && St.clamped && St.tool && St.cabled && St.ampOn)) assembleInstant();
+  St.busy = true; renderSteps(); $('#step' + i)?.classList.add('busy');
+  $('#stepNote').innerHTML = STEPS[i].note;
+  try { await STEPS[i].run(); } catch (e) { console.error(e); }
+  St.busy = false;
+  if (St.mode === 'guided' && i === St.g) St.g = i === 12 ? 0 : i + 1;
+  renderSteps(); updateButtons();
+}
+/* ---- assembly state ---- */
+function assembleInstant() {
+  Object.assign(St, { mounted: true, clamped: true, tool: true, cabled: true, ampOn: true, paramsSet: true, wpLift: 0, clampOut: 0, boltLift: 0, boltsVis: true, wpVis: true, toolVis: true, toolDrop: 0, dynLift: 0, cableK: 1 });
+  Scene3D.setCable(1); Scene3D.setAmp(true);
+  const p = Sim.cutPose(); Object.assign(Sim.S, { xc: p.x, yc: p.y, ztip: p.z, atDepth: true });
+  startAcq(); if (!Chain.st.zeroed) Chain.zero();
+}
+function resetAll(mode) {
+  stopCut(); Tw.list.length = 0; Buf.clear(); Chain.unzero(); St.cutStarted = false;
+  Object.assign(Sim.S, { theta: 0, passDone: false, feeding: false, spindle: false });
+  if (mode === 'guided') {
+    Object.assign(St, { g: 0, mounted: false, clamped: false, tool: false, cabled: false, ampOn: false, paramsSet: false, wpLift: 260, clampOut: 120, boltLift: 60, boltsVis: false, wpVis: false, toolVis: false, toolDrop: -90, dynLift: 230, cableK: 0, acq: false });
+    Scene3D.setCable(0); Scene3D.setAmp(false); Sim.S.acquiring = false;
+    Object.assign(Sim.S, { xc: -250, yc: 0, ztip: 300, atDepth: false });
+    $('#stepNote').innerHTML = `<h3>Start here</h3><p>Follow the 13 steps in order. Each step animates the bench. Click any part of the 3D model for a technical note.</p>`;
+  } else { assembleInstant(); $('#stepNote').innerHTML = `<h3>Free exploration</h3><p>The bench is assembled and zeroed. Run any step, change parameters while cutting, switch anatomy views and click parts for explanations.</p>`; }
+  Scene3D.camTo('iso', .9); renderSteps(); updateButtons();
+}
+function startAcq() { if (!Sim.S.acquiring) { Sim.S.acquiring = true; St.acq = true; Sim.S.t0 = Sim.S.t; Sim.S.nextSample = Sim.S.t; } }
+async function moveHeadToStart(dur) {
+  const S = Sim.S, p = Sim.cutPose(); const x0 = S.xc, y0 = S.yc, z0 = S.ztip; S.atDepth = false;
+  const zSafe = 150; const zA = Math.max(z0, zSafe);
+  await Tw.add(dur * .3, k => S.ztip = z0 + (zA - z0) * k);
+  await Tw.add(dur * .45, k => { S.xc = x0 + (p.x - x0) * k; S.yc = y0 + (p.y - y0) * k; });
+  await Tw.add(dur * .25, k => S.ztip = zA + (p.z - zA) * k);
+  S.atDepth = true;
+}
+async function startCut() {
+  const S = Sim.S;
+  if (!(St.mounted && St.clamped && St.tool && St.cabled && St.ampOn)) { toast('Complete the setup steps first'); return; }
+  startAcq();
+  if (!S.atDepth || S.passDone || S.xc > WP.x0) { S.passDone = false; await moveHeadToStart(1.2); }
+  St.cutStarted = true; S.spindle = true; S.feeding = true; updateButtons();
+}
+function stopCut() { const S = Sim.S; S.spindle = false; S.feeding = false; updateButtons(); }
+function updateButtons() {
+  const S = Sim.S, ready = St.mounted && St.clamped && St.tool && St.cabled && St.ampOn;
+  const guidedLock = St.mode === 'guided' && St.g < 9;
+  const br = $('#bRun'); const running = S.spindle;
+  br.textContent = running ? 'Stop spindle' : 'Start machining'; br.className = 'btn ' + (running ? 'stop' : 'primary'); br.disabled = !ready || guidedLock || St.busy;
+  $('#bPass').disabled = !ready || guidedLock || St.busy; $('#bZeroBtn').disabled = !St.ampOn || St.busy;
+}
+$('#bRun').onclick = () => Sim.S.spindle ? stopCut() : startCut();
+$('#bPass').onclick = async () => { stopCut(); Buf.clear(); Sim.S.t0 = Sim.S.t; St.cutStarted = false; Sim.S.passDone = false; await moveHeadToStart(1); startCut(); };
+$('#bZeroBtn').onclick = () => { Chain.zero(); Sim.S.t0 = Sim.S.t; Buf.clear(); toast('Amplifier reset: outputs zeroed'); };
+
+/* ---- parameter controls ---- */
+const CTRL_CUT = [
+  { k: 'mat', label: 'Workpiece material', opts: [['al6061', 'Aluminium 6061'], ['steel', 'Mild steel'], ['ss316l', 'Stainless steel 316L']] },
+  { k: 'D', label: 'Tool diameter D', u: 'mm', min: 6, max: 25, step: 1, d: 0 },
+  { k: 'z', label: 'Number of teeth z', u: '', min: 2, max: 6, step: 1, d: 0 },
+  { k: 'Vc', label: 'Cutting speed Vc', u: 'm/min', min: 20, max: 600, step: 5, d: 0 },
+  { k: 'fz', label: 'Feed per tooth fz', u: 'mm/tooth', min: 0.01, max: 0.3, step: 0.005, d: 3 },
+  { k: 'ap', label: 'Axial depth of cut ap', u: 'mm', min: 0.5, max: 12, step: 0.5, d: 1 },
+  { k: 'mode', label: 'Tool engagement', opts: [['slot', 'Full slot (ae = D)'], ['down', 'Down milling (climb)'], ['up', 'Up milling (conventional)']] },
+  { k: 'ae', label: 'Radial width of cut ae', u: 'mm', min: 0.5, max: 25, step: 0.5, d: 1 }
+];
+const CTRL_CHAIN = [
+  { k: 'scale', label: 'Amplifier range', opts: [[20, '20 N/V (±200 N full scale)'], [50, '50 N/V (±500 N)'], [100, '100 N/V (±1 kN)'], [200, '200 N/V (±2 kN)'], [500, '500 N/V (±5 kN)']], num: true },
+  { k: 'fs', label: 'Sampling rate fs', opts: [[2000, '2 kHz'], [5000, '5 kHz'], [10000, '10 kHz'], [20000, '20 kHz'], [50000, '50 kHz']], num: true },
+  { k: 'fc', label: 'Low-pass filter cutoff fc', u: 'Hz', min: 100, max: 20000, step: 100, d: 0 },
+  { k: 'fn', label: 'Mounted natural frequency fn', u: 'Hz', min: 800, max: 3500, step: 50, d: 0 },
+  { k: 'timeScale', label: 'Playback speed', u: '× real time', min: 0.02, max: 1, step: 0.01, d: 2 }
+];
+const TOGS = [
+  ['dynamics', 'Structural dynamics', 'Dynamometer + workpiece as a 2nd-order system at fn'],
+  ['crosstalk', 'Crosstalk', 'Small coupling between channels (illustrative matrix)'],
+  ['noise', 'Electrical / environmental noise', 'Broadband noise on the charge signal'],
+  ['drift', 'Charge drift', 'Leakage drift, exaggerated for visibility'],
+  ['unzeroed', 'Skip amplifier reset', 'Keeps residual charge offset in the signal']
+];
+function buildControls() {
+  const mk = (host, c) => {
+    const w = document.createElement('div'); w.className = 'ctl';
+    if (c.opts) { w.innerHTML = `<label for="c_${c.k}">${c.label}</label><span></span><select id="c_${c.k}">${c.opts.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('')}</select>`;
+      host.appendChild(w); const s = w.querySelector('select'); s.value = P[c.k]; s.onchange = () => { P[c.k] = c.num ? +s.value : s.value; if (c.k === 'mat') { P.Vc = Model.MATERIALS[P.mat].Vc; syncControls(); } apply(c.k); }; }
+    else { w.innerHTML = `<label for="c_${c.k}">${c.label}</label><span class="val" id="v_${c.k}"></span><input type="range" id="c_${c.k}" min="${c.min}" max="${c.max}" step="${c.step}">`;
+      host.appendChild(w); const r = w.querySelector('input'); r.value = P[c.k]; r.oninput = () => { P[c.k] = +r.value; apply(c.k); }; }
+  };
+  CTRL_CUT.forEach(c => mk($('#fsCut'), c)); CTRL_CHAIN.forEach(c => mk($('#fsChain'), c));
+  const helix = document.createElement('p'); helix.className = 'note'; helix.innerHTML = 'Helix angle β = 30° (fixed, illustrative). Edit any value during a cut to see the force respond.'; $('#fsCut').appendChild(helix);
+  TOGS.forEach(([k, l, s]) => { const lab = document.createElement('label'); lab.className = 'tog'; lab.innerHTML = `<input type="checkbox" id="t_${k}"><span>${l}<small>${s}</small></span>`; $('#fsErr').appendChild(lab);
+    const cb = lab.querySelector('input'); cb.checked = P[k]; cb.onchange = () => { P[k] = cb.checked; apply(k); }; });
+}
+function syncControls() {
+  [...CTRL_CUT, ...CTRL_CHAIN].forEach(c => { const el = $('#c_' + c.k); if (el) el.value = P[c.k]; const v = $('#v_' + c.k); if (v) v.textContent = (+P[c.k]).toFixed(c.d) + (c.u ? ' ' + c.u : ''); });
+  const aeCtl = $('#c_ae'); if (aeCtl) { aeCtl.max = P.D; aeCtl.disabled = P.mode === 'slot'; }
+  TOGS.forEach(([k]) => { const el = $('#t_' + k); if (el) el.checked = P[k]; });
+}
+function apply(key) {
+  if (P.ae > P.D) P.ae = P.D;
+  Sim.configure(); syncControls();
+  if (key === 'D' || key === 'z') Scene3D.buildTool();
+  if (key === 'mat') Scene3D.setWorkpieceMaterial();
+  const S = Sim.S;
+  if (['D', 'mode', 'ae', 'ap'].includes(key) && S.atDepth && !Tw.list.length) { const p = Sim.cutPose(); S.yc = p.y; S.ztip = p.z; }
+  if (key === 'unzeroed') Chain.st.zeroed = Chain.st.zeroed; // flag read live
+  renderDerived();
+}
+function renderDerived() {
+  const k = Sim.S.k, m = Model.MATERIALS[P.mat];
+  const items = [['Spindle speed N', `${k.N.toFixed(0)} rpm`], ['Feed rate Vf', `${k.Vf.toFixed(0)} mm/min`], ['Tooth-passing f_TP', `${k.TPF.toFixed(1)} Hz`], ['Spindle freq.', `${k.fsp.toFixed(1)} Hz`],
+    ['Max chip thickness', `${(k.hmax * 1000).toFixed(1)} µm`], ['Engagement φst–φex', `${(k.phst * 180 / Math.PI).toFixed(0)}°–${(k.phex * 180 / Math.PI).toFixed(0)}°`],
+    ['Radial width ae', `${k.ae.toFixed(1)} mm`], ['MRR', `${k.MRR.toFixed(1)} cm³/min`], ['Ktc / Krc / Kac', `${m.Ktc} / ${m.Krc} / ${m.Kac}`], ['Kte / Kre / Kae', `${m.Kte} / ${m.Kre} / ${m.Kae}`]];
+  $('#derived').innerHTML = items.map(([a, b]) => `<div><span>${a}</span>${b}</div>`).join('');
+  $('#matNote').innerHTML = `<span class="cat ${m.cat}">${m.cat}</span> ${m.note}`;
+}
+
+/* ---- tabs and modes ---- */
+function showTab(name) { $$('#tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name)); $$('.tabpanel').forEach(p => p.hidden = p.dataset.panel !== name); if (name === 'analysis') refreshAnalysis(true); if (name === 'experiment') renderTrials(); }
+$$('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+function setMode(m) {
+  St.mode = m; $$('.modes button').forEach(b => b.setAttribute('aria-selected', b.dataset.mode === m));
+  resetAll(m === 'guided' ? 'guided' : 'free');
+  if (m === 'experiment') { showTab('experiment'); $('#stepNote').innerHTML = `<h3>Virtual experiment</h3><p>Plan with the parameter sweep, then run real (simulated) cuts and record each trial. Compare mean and peak forces across trials and export the table.</p>`; }
+  else if (m === 'assess') { showTab('assess'); $('#stepNote').innerHTML = `<h3>Assessment</h3><p>Complete the interactive tasks using the simulator, then answer the concept questions. Generate a report at the end.</p>`; }
+  else showTab('params');
+}
+$$('.modes button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+function markView(v) { $$('#viewSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v)); }
+$$('#viewSeg button').forEach(b => b.onclick = () => { Scene3D.setView(b.dataset.view); markView(b.dataset.view); if (b.dataset.view === 'external') Scene3D.camTo('iso', .8); else if (b.dataset.view !== 'sensor') Scene3D.camTo('dyn', .9); });
+$$('#camSeg button').forEach(b => b.onclick = () => Scene3D.camTo(b.dataset.cam));
+$('#exag').oninput = e => { P.exag = +e.target.value; $('#exagVal').textContent = P.exag; };
+$('#tVec').onchange = e => P.vectors = e.target.checked;
+$('#tTrue').onchange = e => P.showTrue = e.target.checked;
+
+/* ---- signal chain strip ---- */
+function buildChain() {
+  const row = $('#chainRow'); row.innerHTML = '';
+  CHAIN.forEach(([key, t, s, kind], i) => {
+    if (i) { const l = document.createElement('div'); l.className = 'link' + (CHAIN[i - 1][3] === 'mech' ? ' m' : ''); row.appendChild(l); }
+    const b = document.createElement('button'); b.className = 'node ' + kind; b.innerHTML = `<b>${t}</b><span>${s}</span>`; b.onclick = () => info(key); row.appendChild(b);
+  });
+}
+
+/* ---- dashboard updates ---- */
+let uiTimer = 0, plotTimer = 0, anaTimer = 0;
+function updateReadouts() {
+  const S = Sim.S, k = S.k, F = S.Fm;
+  const show = St.ampOn && S.acquiring;
+  $('#rFx').textContent = show ? fmt(F[0]) : '—'; $('#rFy').textContent = show ? fmt(F[1]) : '—'; $('#rFz').textContent = show ? fmt(F[2]) : '—';
+  $('#rFr').textContent = show ? fmt(Math.hypot(F[0], F[1], F[2])) : '—';
+  $('#rN').textContent = S.spindle ? k.N.toFixed(0) : '0'; $('#rVc').textContent = S.spindle ? P.Vc.toFixed(0) : '0';
+  $('#rFz2').textContent = P.fz.toFixed(3); $('#rAp').textContent = P.ap.toFixed(1);
+  $('#rV').textContent = show ? S.V.map(v => (v >= 0 ? '+' : '') + v.toFixed(2)).join(' / ') : '— / — / —';
+  $('#rT').textContent = show ? (S.t - S.t0).toFixed(3) : '0.000';
+  const Fs = S.Fs, dxy = Math.hypot(Fs[0], Fs[1]) / Model.SPEC.kx;
+  $('#chainVals').innerHTML = `<span>Q<sub>x,y,z</sub> <b>${show ? S.Q.map(q => q.toFixed(0)).join(', ') : '—'}</b> pC</span><span>h <b>${(S.h * 1000).toFixed(1)}</b> µm</span><span>teeth in cut <b>${S.nEng}</b></span><span>real deflection ≈ <b>${(dxy * 1000).toFixed(0)}</b> nm (xy)</span>`;
+  $('#chain').classList.toggle('live', S.spindle && S.nEng > 0);
+  // badges
+  const W = S.Fw, over = Math.abs(W[0]) > Model.SPEC.rangeXY || Math.abs(W[1]) > Model.SPEC.rangeXY || W[2] > Model.SPEC.rangeZmax || W[2] < Model.SPEC.rangeZmin;
+  $('#bOver').hidden = !over; $('#bSat').hidden = !(S.satT > 0);
+  const fsHalf = P.fs / 2; $('#bAlias').hidden = !(Math.min(P.fc, S.FS / 2) > fsHalf * 0.9 || (S.spindle && k.TPF * 3 > fsHalf));
+  let near = false; if (P.dynamics && S.spindle) for (let h = 1; h <= 6; h++) if (Math.abs(h * k.TPF - P.fn) / P.fn < 0.06) near = true; $('#bRes').hidden = !near;
+  $('#bZero').hidden = !(St.ampOn && (!Chain.st.zeroed || P.unzeroed));
+  $('#bState').textContent = S.spindle ? (S.feeding ? 'Cutting' : 'Spindle on') : St.ampOn ? 'Acquiring' : 'Idle';
+  // viewport caption for anatomy views
+  const v = Scene3D.fl.view, cap = $('#vpCap');
+  if ((v === 'sensor' || v === 'flow') && St.loads) {
+    cap.innerHTML = `<b>${v === 'sensor' ? 'Inside one sensor' : 'Force path into the sensors'}</b><div class="muted" style="margin:2px 0 6px">Educational representation. Deflection drawn ×${P.exag}; colour glow ∝ load.</div>` +
+      `<table class="tbl" style="font-size:11px"><tr><th>Sensor</th><th>Fz,i</th><th>Fx,i</th><th>Fy,i</th></tr>${St.loads.map((l, i) => `<tr><td>${i + 1}</td><td class="num">${fmt(l.fz)}</td><td class="num">${fmt(l.fx)}</td><td class="num">${fmt(l.fy)}</td></tr>`).join('')}</table><div class="muted" style="margin-top:4px">Sum of Fz,i = Fz; differences carry the moments.</div>`;
+  } else if (v === 'exploded') cap.innerHTML = `<b>Exploded assembly</b><div class="muted">Cover plate, four sensors (each: preload sleeve, quartz rings for Fz, Fx, Fy, gold electrodes) and base plate.</div>`;
+  else if (v === 'section') cap.innerHTML = `<b>Sectional cutaway</b><div class="muted">Housing cut on the x–z plane to reveal the sensors between base and cover plate. Internal geometry is illustrative.</div>`;
+  else cap.innerHTML = '';
+}
+function updatePlots() {
+  const win = Buf.window(plotWindow()), n = win.n;
+  const x0 = n ? win.t[0] : 0, x1 = n ? Math.max(win.t[n - 1], x0 + 1e-4) : 1;
+  const [lo, hi] = autoRange('all', [win.fx, win.fy, win.fz, win.fr], n, false);
+  const band = { x: win.t, y: win.en, n };
+  const empty = !St.ampOn ? 'Amplifier off · complete setup' : n < 2 ? 'Waiting for data' : null;
+  let c = setupCanvas($('#pAll'));
+  drawPlot(c.ctx, c.w, c.h, { x0, x1, y0: lo, y1: hi, xlab: 't (s)', ylab: 'N', band, empty,
+    series: [{ x: win.t, y: win.fr, n, color: TOK.fr, width: 1.6 }, { x: win.t, y: win.fx, n, color: TOK.fx }, { x: win.t, y: win.fy, n, color: TOK.fy }, { x: win.t, y: win.fz, n, color: TOK.fz }] });
+  [['pX', 'fx', 'tx', TOK.fx, 'Fx'], ['pY', 'fy', 'ty', TOK.fy, 'Fy'], ['pZ', 'fz', 'tz', TOK.fz, 'Fz']].forEach(([id, a, t, col, lab]) => {
+    const [l, h] = autoRange(id, P.showTrue ? [win[a], win[t]] : [win[a]], n, true);
+    c = setupCanvas($('#' + id));
+    const ser = [{ x: win.t, y: win[a], n, color: col }]; if (P.showTrue) ser.push({ x: win.t, y: win[t], n, color: TOK.ink, dash: [3, 3], width: 1, alpha: .7 });
+    drawPlot(c.ctx, c.w, c.h, { x0, x1, y0: l, y1: h, title: lab + ' (N)', titleColor: col, band, series: ser, yTicks: 2 });
+  });
+  const st = { fx: Stats.of(win.fx, n), fy: Stats.of(win.fy, n), fz: Stats.of(win.fz, n), fr: Stats.of(win.fr, n) };
+  $('#statLine').innerHTML = ['fx', 'fy', 'fz', 'fr'].map(k => `<div><span>${k.toUpperCase()} mean / peak / rms</span>${fmt(st[k].mean, 0)} / ${fmt(st[k].peak, 0)} / ${fmt(st[k].rms, 0)}</div>`).join('');
+}
+/* steady window for analysis: recent samples with tool engaged */
+function steadyWindow() {
+  const fs = P.fs, S = Sim.S; const span = Math.max(16 / Math.max(S.k.fsp, 1), 0.1);
+  const w = Buf.window(span, 32768); if (!w.n) return w;
+  let eng = 0; for (let i = 0; i < w.n; i++) if (w.en[i]) eng++;
+  w.engFrac = eng / w.n; return w;
+}
+function refreshAnalysis(force) {
+  if ($('[data-panel="analysis"]').hidden && !force) return;
+  const w = steadyWindow(), n = w.n, k = Sim.S.k;
+  const rows = ['fx', 'fy', 'fz', 'fr'].map(c => [c, Stats.of(w[c], n), Stats.of(w['t' + c.slice(1)], n)]);
+  $('#statTbl').innerHTML = `<tr><th>Channel</th><th>Mean</th><th>Peak</th><th>RMS</th><th>p–p</th><th>Model mean</th></tr>` + rows.map(([c, s, m]) => `<tr><td style="color:var(--${c})"><b>${c[0].toUpperCase()}${c[1]}</b></td><td class="num">${fmt(s.mean)}</td><td class="num">${fmt(s.peak)}</td><td class="num">${fmt(s.rms)}</td><td class="num">${fmt(s.pp)}</td><td class="num">${fmt(m.mean)}</td></tr>`).join('') + `<tr><td colspan="6" class="muted">Window ${n ? (w.t[n - 1] - w.t[0]).toFixed(3) : 0} s · ${n} samples · tool engaged ${n ? (w.engFrac * 100).toFixed(0) : 0}% · all values in N, simulated</td></tr>`;
+  const ch = $('#specCh').value; const spec = Stats.fft(w[ch], P.fs);
+  const c = setupCanvas($('#pSpec'));
+  if (!spec) { drawPlot(c.ctx, c.w, c.h, { x0: 0, x1: P.fs / 2, y0: 0, y1: 1, xlab: 'f (Hz)', series: [], empty: 'Need more samples' }); }
+  else {
+    const fmax = Math.max(6 * k.TPF, P.fn * 1.15); const nb = Math.min(spec.mag.length, Math.ceil(fmax / spec.df));
+    const xs = new Float32Array(nb), ys = new Float32Array(nb); let ymax = 1; for (let i = 0; i < nb; i++) { xs[i] = i * spec.df; ys[i] = spec.mag[i]; if (i > 1 && ys[i] > ymax) ymax = ys[i]; }
+    const vl = []; for (let h = 1; h <= 6; h++) vl.push({ x: h * k.TPF, color: TOK.muted, label: h === 1 ? 'f_TP' : h + '×' }); vl.push({ x: P.fn, color: TOK.crit, dash: [6, 3], label: 'fn' });
+    drawPlot(c.ctx, c.w, c.h, { x0: 0, x1: fmax, y0: 0, y1: ymax * 1.15, xlab: 'f (Hz)', ylab: 'N', vlines: vl, shade: { from: P.fs / 2, color: TOK.crit }, series: [{ x: xs, y: ys, n: nb, color: TOK[ch], width: 1.3 }] });
+  }
+  // interpretation
+  const p = [];
+  if (!n || !Sim.S.spindle && !Buf.count) { $('#interp').innerHTML = '<p>Run a cut to analyse the force signal.</p>'; return; }
+  const [sx, sy, sz, sr] = rows.map(r => r[1]);
+  if (spec && w.engFrac > .3) { const err = Math.abs(spec.peakF - k.TPF) / k.TPF; p.push(`Dominant frequency <b>${spec.peakF.toFixed(0)} Hz</b> vs tooth-passing frequency N·z/60 = <b>${k.TPF.toFixed(0)} Hz</b>${err < .08 ? ' — the force is periodic with each tooth entry.' : err < .55 && Math.abs(spec.peakF - 2 * k.TPF) / k.TPF < .1 ? ' — the second harmonic dominates for this engagement.' : '. The match is poor; check resonance, aliasing or partial engagement.'}`); }
+  if (sr.mean > 1) p.push(`Peak-to-mean ratio of F<sub>r</sub>: <b>${(sr.peak / sr.mean).toFixed(2)}</b>. ${P.mode === 'slot' ? 'In a full slot more than one tooth is often engaged, which smooths the resultant.' : 'Partial radial engagement gives interrupted cutting and a strongly pulsating signal.'}`);
+  if (sr.mean > 1) p.push(`F<sub>z</sub> is ${(Math.abs(sz.mean) / sr.mean * 100).toFixed(0)}% of the mean resultant; with a ${P.helix}° helix the axial component is ${Math.abs(sz.mean) < 0.4 * sr.mean ? 'secondary' : 'significant'}.`);
+  const me = rows[3][2].mean; if (me > 1) p.push(`Measured mean F<sub>r</sub> differs from the noise-free model by <b>${((sr.mean - me) / me * 100).toFixed(1)}%</b>${P.unzeroed || !Chain.st.zeroed ? ', mainly from the residual offset of the un-reset amplifier' : P.drift ? ', partly from charge drift' : ''}.`);
+  if (P.dynamics) { let hh = 0; for (let h = 1; h <= 6; h++) if (Math.abs(h * k.TPF - P.fn) / P.fn < .1) hh = h; if (hh) p.push(`<b>Caution:</b> harmonic ${hh} of f<sub>TP</sub> lies near the mounted natural frequency (${P.fn} Hz). The dynamometer amplifies it and the signal no longer represents the cutting force alone.`); else if (6 * k.TPF > P.fn / 2) p.push(`Higher harmonics approach fn; consider the usable bandwidth (rule of thumb: well below fn).`); }
+  if (P.fc > P.fs / 2) p.push(`<b>Aliasing:</b> the filter cutoff (${P.fc} Hz) is above Nyquist (${P.fs / 2} Hz). Components above fs/2 fold back into the band.`);
+  if (Sim.S.satT > 0) p.push('<b>Amplifier saturation</b> clipped the signal. Select a larger range (N/V).');
+  $('#interp').innerHTML = p.map(x => `<p>${x}</p>`).join('') + '<p class="muted" style="font-size:12px">Automatic interpretation of simulated data.</p>';
+}
+$('#specCh').onchange = () => refreshAnalysis(true);
+
+/* ---- export ---- */
+let modalFile = { name: '', text: '' };
+function openExport(title, name, text, note) {
+  modalFile = { name, text }; $('#mTitle').textContent = title; $('#mText').value = text; $('#mMsg').textContent = '';
+  $('#mNote').textContent = note || 'If the download does not start (some embedded viewers block downloads), copy the text and save it with the file name shown.'; $('#modal').hidden = false;
+}
+$('#mClose').onclick = () => $('#modal').hidden = true;
+$('#modal').onclick = e => { if (e.target.id === 'modal') $('#modal').hidden = true; };
+$('#mDl').onclick = () => { try { const b = new Blob([modalFile.text], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = modalFile.name; document.body.appendChild(a); a.click(); a.remove(); $('#mMsg').textContent = 'Download requested: ' + modalFile.name; } catch (e) { $('#mMsg').textContent = 'Download blocked here. Use copy.'; } };
+$('#mCopy').onclick = () => { const ta = $('#mText'); try { navigator.clipboard.writeText(ta.value).then(() => $('#mMsg').textContent = 'Copied.', () => { ta.select(); $('#mMsg').textContent = 'Press Ctrl/Cmd+C to copy the selection.'; }); } catch (e) { ta.select(); $('#mMsg').textContent = 'Press Ctrl/Cmd+C to copy the selection.'; } };
+function setupHeader() {
+  const k = Sim.S.k, m = Model.MATERIALS[P.mat];
+  return [`# SIMULATED DATA — Cutting Force Dynamometer Lab (educational model, not an experimental measurement)`, `# generated,${new Date().toISOString()}`,
+    `# material,${m.name},tool_D_mm,${P.D},teeth,${P.z},helix_deg,${P.helix},Vc_m_min,${P.Vc},fz_mm,${P.fz},ap_mm,${P.ap},ae_mm,${k.ae},engagement,${P.mode}`,
+    `# N_rpm,${k.N.toFixed(1)},Vf_mm_min,${k.Vf.toFixed(1)},f_TP_Hz,${k.TPF.toFixed(2)}`,
+    `# sens_pC_per_N,${Model.SPEC.S.join(';')},range_N_per_V,${P.scale},fs_Hz,${P.fs},fc_Hz,${P.fc},fn_mounted_Hz,${P.fn},dynamics,${P.dynamics},crosstalk,${P.crosstalk},noise,${P.noise},drift,${P.drift},zeroed,${Chain.st.zeroed && !P.unzeroed}`];
+}
+function exportRaw() {
+  const w = Buf.last(Math.min(Buf.count, 50000));
+  const lines = setupHeader(); lines.push('t_s,Fx_N,Fy_N,Fz_N,Fr_N,Fx_model_N,Fy_model_N,Fz_model_N,teeth_engaged');
+  for (let i = 0; i < w.n; i++) lines.push(`${w.t[i].toFixed(6)},${w.fx[i].toFixed(2)},${w.fy[i].toFixed(2)},${w.fz[i].toFixed(2)},${w.fr[i].toFixed(2)},${w.tx[i].toFixed(2)},${w.ty[i].toFixed(2)},${w.tz[i].toFixed(2)},${w.en[i]}`);
+  openExport('Raw signal CSV', 'dynamometer_signal.csv', lines.join('\n'), w.n ? `${w.n} samples (most recent, max 50 000). If the download does not start in this viewer, copy the text and save it as dynamometer_signal.csv.` : 'No samples yet. Start acquisition and cut first.');
+}
+$('#bExpRaw').onclick = exportRaw;
+
+/* =====================================================================
+   MODULE 8 — EXPERIMENT LOG (local storage) and parameter sweep
+   ===================================================================== */
+const Store = {
+  key: 'kdl.trials.v1',
+  load() { try { return JSON.parse(localStorage.getItem(this.key) || '[]'); } catch (e) { return this.mem || []; } },
+  save(a) { this.mem = a; try { localStorage.setItem(this.key, JSON.stringify(a)); } catch (e) {} }
+};
+const SAMPLE_TRIALS = [
+  { id: 'E1', example: true, mat: 'al6061', D: 12, z: 3, Vc: 200, fz: 0.05, ap: 4, ae: 12, mode: 'slot', fx: 143.0, fy: -225.2, fz_: -53.2, frMean: 276.6, frPeak: 313.7, ftp: 265.3 },
+  { id: 'E2', example: true, mat: 'al6061', D: 12, z: 3, Vc: 200, fz: 0.10, ap: 4, ae: 12, mode: 'slot', fx: 168.4, fy: -344.6, fz_: -95.6, frMean: 404.7, frPeak: 474.6, ftp: 265.3 }
+];
+function recordTrial() {
+  const w = steadyWindow(); if (!w.n || w.engFrac < .6) { toast('Run a steady cut first (tool fully in the workpiece)'); return; }
+  const s = c => Stats.of(w[c], w.n), k = Sim.S.k, fr = s('fr');
+  const a = Store.load().filter(t => !t.example); const id = 'T' + (a.length + 1);
+  a.push({ id, mat: P.mat, D: P.D, z: P.z, Vc: P.Vc, fz: P.fz, ap: P.ap, ae: +k.ae.toFixed(2), mode: P.mode, fx: +s('fx').mean.toFixed(1), fy: +s('fy').mean.toFixed(1), fz_: +s('fz').mean.toFixed(1), frMean: +fr.mean.toFixed(1), frPeak: +fr.peak.toFixed(1), ftp: +k.TPF.toFixed(1), zeroed: Chain.st.zeroed && !P.unzeroed });
+  Store.save(a); renderTrials(); toast(`Recorded ${id}`);
+}
+function trialsForView() { const a = Store.load(); return a.length ? a : SAMPLE_TRIALS; }
+function renderTrials() {
+  const a = trialsForView(), ex = a.some(t => t.example);
+  $('#trialTbl').innerHTML = `<tr><th>Trial</th><th>Material</th><th>D/z</th><th>Vc</th><th>fz</th><th>ap</th><th>ae</th><th>Mean Fx</th><th>Mean Fy</th><th>Mean Fz</th><th>Mean Fr</th><th>Peak Fr</th></tr>` +
+    a.map(t => `<tr><td>${t.id}${t.example ? ' <span class="cat C">example</span>' : ''}</td><td>${Model.MATERIALS[t.mat].name.split(' ').slice(0, 2).join(' ')}</td><td class="num">${t.D}/${t.z}</td><td class="num">${t.Vc}</td><td class="num">${t.fz}</td><td class="num">${t.ap}</td><td class="num">${t.ae}</td><td class="num">${t.fx}</td><td class="num">${t.fy}</td><td class="num">${t.fz_}</td><td class="num">${t.frMean}</td><td class="num">${t.frPeak}</td></tr>`).join('') +
+    (ex ? `<tr><td colspan="12" class="muted">Example rows (simulated) shown until you record your first trial.</td></tr>` : '');
+  const c = setupCanvas($('#pTrials')); const n = a.length; const xs = a.map((_, i) => i + 1);
+  const ymax = Math.max(10, ...a.map(t => t.frPeak)) * 1.15;
+  drawPlot(c.ctx, c.w, c.h, { x0: .4, x1: n + .6, y0: 0, y1: ymax, xTicks: Math.min(n, 8), ylab: 'N', xlab: 'trial #', title: 'Mean Fr (bars) and peak Fr (dots)',
+    series: [{ x: xs, y: a.map(t => t.frMean), n, color: TOK.fr, bars: true }, { x: xs, y: a.map(t => t.frPeak), n, color: TOK.crit, dots: true, width: 1, alpha: .9 }] });
+}
+$('#bRec').onclick = recordTrial;
+$('#bClear').onclick = () => { Store.save([]); renderTrials(); toast('Trials cleared'); };
+$('#bExpTrials').onclick = () => {
+  const a = Store.load(); const lines = ['# SIMULATED DATA — Cutting Force Dynamometer Lab trials', 'trial,material,D_mm,z,Vc_m_min,fz_mm,ap_mm,ae_mm,engagement,mean_Fx_N,mean_Fy_N,mean_Fz_N,mean_Fr_N,peak_Fr_N,f_TP_Hz,zeroed'];
+  a.forEach(t => lines.push([t.id, t.mat, t.D, t.z, t.Vc, t.fz, t.ap, t.ae, t.mode, t.fx, t.fy, t.fz_, t.frMean, t.frPeak, t.ftp, t.zeroed].join(',')));
+  openExport('Trials CSV', 'dynamometer_trials.csv', lines.join('\n'), a.length ? null : 'No recorded trials yet; record a trial first.');
+};
+function runSweep() {
+  const key = $('#swParam').value; const base = { ...P };
+  const R = { fz: [0.02, 0.25], ap: [0.5, 12], ae: [0.5, P.D], Vc: [40, 500], z: [2, 6], D: [6, 25] }[key];
+  const npts = key === 'z' ? 5 : 12; const xs = [], fr = [], pk = [], fx = [], fy = [], fz = [];
+  for (let i = 0; i < npts; i++) {
+    let v = R[0] + (R[1] - R[0]) * i / (npts - 1); if (key === 'z' || key === 'D') v = Math.round(v);
+    const p = { ...base, [key]: v }; if (key === 'ae') p.mode = P.mode === 'slot' ? 'down' : P.mode; if (p.ae > p.D) p.ae = p.D;
+    const s = Model.steadyStats(p); xs.push(v); fr.push(s.fr.mean); pk.push(s.fr.peak); fx.push(s.fx.mean); fy.push(s.fy.mean); fz.push(s.fz.mean);
+  }
+  const all = [...fr, ...pk, ...fx, ...fy, ...fz]; const lo = Math.min(0, ...all) * 1.1, hi = Math.max(...all) * 1.12;
+  const c = setupCanvas($('#pSweep'));
+  drawPlot(c.ctx, c.w, c.h, { x0: xs[0], x1: xs[xs.length - 1], y0: lo, y1: hi, xlab: $('#swParam').selectedOptions[0].text, ylab: 'N',
+    series: [{ x: xs, y: pk, n: npts, color: TOK.fr, dash: [4, 3], dots: true }, { x: xs, y: fr, n: npts, color: TOK.fr, width: 2, dots: true }, { x: xs, y: fx, n: npts, color: TOK.fx }, { x: xs, y: fy, n: npts, color: TOK.fy }, { x: xs, y: fz, n: npts, color: TOK.fz }] });
+  $('#sweepNote').innerHTML = `Solid amber: mean F<sub>r</sub>; dashed: peak F<sub>r</sub>; red, green, blue: mean F<sub>x</sub>, F<sub>y</sub>, F<sub>z</sub>.` + (key === 'Vc' ? ' The mechanistic model uses speed-independent coefficients, so force does not change with Vc. Real materials show a mild decrease at higher speed (thermal softening, built-up edge effects).' : key === 'fz' ? ' Force rises almost linearly with fz; the intercept comes from the edge (ploughing) coefficients.' : '') + ' Simulated values.';
+}
+$('#bSweep').onclick = runSweep;
+
+/* =====================================================================
+   MODULE 9 — ASSESSMENT
+   ===================================================================== */
+const QUIZ = [
+  ['Piezoelectric sensing', 'Which quartz elements let a three-component sensor measure the horizontal forces Fx and Fy?', ['Plates cut for the longitudinal (compression) effect', 'Plates cut for the shear effect', 'Plates loaded in tension by the preload bolt', 'Strain gauges bonded to the quartz'], 1, 'Shear-cut plates produce charge only from shear in their sensitive direction. Two orthogonal shear plates give Fx and Fy; a compression plate gives Fz.'],
+  ['Piezoelectric sensing', 'A loaded quartz element primarily produces…', ['a voltage proportional to strain rate', 'an electrical charge proportional to force', 'a resistance change proportional to strain', 'a current proportional to force'], 1, 'The piezoelectric effect separates charge: Q = d·F. The charge amplifier then converts charge to voltage.'],
+  ['Instrument setup', 'Why is a charge amplifier used?', ['It increases the mechanical stiffness of the sensor', 'It converts the small, high-impedance charge into a proportional low-impedance voltage, largely independent of cable capacitance', 'It removes the need for calibration', 'It integrates force to give displacement'], 1, 'An integrating amplifier with feedback capacitor Cf gives Vout = −Q/Cf; the input stays near virtual ground, so cable capacitance has little effect.'],
+  ['Measurement errors', 'Why are piezoelectric dynamometers poorly suited to long static measurements?', ['Quartz loses its piezoelectric property under constant load', 'Finite insulation resistance and amplifier leakage make the charge drift over time', 'The natural frequency falls under static load', 'Static loads always exceed the range'], 1, 'Charge leaks through insulation and the amplifier input; this drift limits quasi-static measurements. Enable “Charge drift” to see it.'],
+  ['Instrument setup', 'Why reset (zero) the charge amplifier just before cutting?', ['To set the sensitivity to the data-sheet value', 'To remove residual charge from clamping, temperature change and earlier loads', 'To raise the sampling rate', 'To calibrate the crosstalk matrix'], 1, 'Reset discharges Cf. Without it the clamping and thermal history appears as an offset (try “Skip amplifier reset”).'],
+  ['Cutting parameters', 'Vc = 200 m/min with a Ø12 mm end mill. Spindle speed N ≈ ?', ['1 667 rpm', '5 305 rpm', '16 667 rpm', '53 052 rpm'], 1, 'N = 1000·200/(π·12) ≈ 5 305 rpm.'],
+  ['Signal interpretation', 'N = 6 000 rpm, z = 4. The tooth-passing frequency is…', ['100 Hz', '400 Hz', '1 500 Hz', '24 000 Hz'], 1, 'f_TP = N·z/60 = 6000·4/60 = 400 Hz.'],
+  ['Cutting parameters', 'With constant cutting coefficients, doubling fz makes the mean cutting force…', ['stay the same', 'rise to slightly less than double, because edge (ploughing) forces do not scale with chip thickness', 'rise four-fold', 'halve'], 1, 'Mean force = Kc·(mean h)·ap + Ke·(contact length). Only the first term scales with fz.'],
+  ['Signal interpretation', 'Tooth-passing frequency and its harmonics should be…', ['close to the dynamometer natural frequency for maximum signal', 'well below the natural frequency of the mounted dynamometer–workpiece system', 'above the sampling rate', 'equal to the filter cutoff'], 1, 'Near resonance the structure amplifies the excitation, so the output no longer equals the cutting force.'],
+  ['Force components', 'Sz = −3.7 pC/N. A 1 000 N load in z produces…', ['−3.7 pC', '−370 pC', '−3 700 pC', '−37 000 pC'], 2, 'Q = S·F = −3.7 pC/N × 1000 N = −3 700 pC.'],
+  ['Measurement errors', 'A force signal has content up to 1.2 kHz. Which setup is most defensible?', ['fs = 2 kHz, no filter', 'fs = 2.4 kHz, filter at 2 kHz', 'fs = 10 kHz, low-pass at ≈ 1.5–3 kHz', 'fs = 1 kHz, filter at 400 Hz'], 2, 'Sample well above 2·fmax and keep the cutoff below fs/2 so nothing aliases.'],
+  ['Measurement errors', '“Crosstalk” in a multicomponent dynamometer means…', ['electrical noise picked up by the cable', 'an output on one channel caused by a force along another axis', 'thermal drift of the amplifier', 'the difference between x and y sensitivity'], 1, 'Crosstalk is specified as a percentage of the applied force and is corrected with a calibration matrix when needed.'],
+  ['Instrument setup', 'A heavy fixture and workpiece are clamped on the cover plate. The usable bandwidth will…', ['increase, because mass adds stiffness', 'decrease, because added mass lowers the natural frequency', 'stay at the data-sheet natural frequency', 'double'], 1, 'fn = (1/2π)·√(k/m). Extra mass lowers fn; the data-sheet value applies to the bare sensor.'],
+  ['Force components', 'The force read by the dynamometer relates to the force on the tool by…', ['equal magnitude, opposite direction', 'a factor equal to the number of teeth', 'the ratio Sx/Sz', 'no fixed relationship'], 0, 'Action and reaction: the workpiece receives −F_tool, which the dynamometer carries to the table.']
+];
+const TASKS = [
+  { id: 't1', title: 'Hit a target force', text: 'In Aluminium 6061, with the amplifier reset, choose parameters so the mean resultant force F<sub>r</sub> is between 500 N and 650 N during a steady cut. Then check.', topic: 'Cutting parameter selection',
+    check() { const w = steadyWindow(); if (P.mat !== 'al6061') return [false, 'Select Aluminium 6061.']; if (!Chain.st.zeroed || P.unzeroed) return [false, 'Reset the amplifier first.']; if (!w.n || w.engFrac < .6) return [false, 'Run a steady cut first.']; const m = Stats.of(w.fr, w.n).mean; return [m >= 500 && m <= 650, `Mean Fr = ${m.toFixed(0)} N.`]; } },
+  { id: 't2', title: 'Tooth-passing frequency', text: 'Enter the tooth-passing frequency of your current setup in Hz.', input: true, topic: 'Force signal interpretation',
+    check(v) { const t = Sim.S.k.TPF; return [Math.abs(v - t) / t < 0.03, `Expected N·z/60 = ${t.toFixed(1)} Hz.`]; } },
+  { id: 't3', title: 'Anti-aliasing setup', text: 'Configure acquisition so that f<sub>s</sub> ≥ 10 × f<sub>TP</sub> and the low-pass cutoff lies between 3 × f<sub>TP</sub> and f<sub>s</sub>/2.', topic: 'Instrument setup',
+    check() { const t = Sim.S.k.TPF; const ok = P.fs >= 10 * t && P.fc >= 3 * t && P.fc <= P.fs / 2; return [ok, `f_TP = ${t.toFixed(0)} Hz, fs = ${P.fs} Hz, fc = ${P.fc} Hz.`]; } },
+  { id: 't4', title: 'Which axis dominates?', text: 'Run a full-slot cut. Which component has the largest mean magnitude?', choices: ['Fx', 'Fy', 'Fz'], topic: 'Force components',
+    check(v) { if (P.mode !== 'slot') return [false, 'Select full slot engagement.']; const w = steadyWindow(); if (!w.n || w.engFrac < .6) return [false, 'Run a steady slot cut first.']; const m = ['fx', 'fy', 'fz'].map(c => Math.abs(Stats.of(w[c], w.n).mean)); const best = ['Fx', 'Fy', 'Fz'][m.indexOf(Math.max(...m))]; return [v === best, `Mean |F|: Fx ${m[0].toFixed(0)}, Fy ${m[1].toFixed(0)}, Fz ${m[2].toFixed(0)} N. In slotting the normal (y) component usually dominates on average: the tangential force projects mainly onto y over the 0–180° immersion, while its x-projections from the entry and exit halves partly cancel.`]; } }
+];
+const Assess = { ans: {}, task: {} };
+function renderAssess() {
+  $('#quiz').innerHTML = ''; $('#tasks').innerHTML = '';
+  QUIZ.forEach((q, i) => {
+    const d = document.createElement('div'); d.className = 'q';
+    d.innerHTML = `<span class="topic">${q[0]}</span><div class="qt">${i + 1}. ${q[1]}</div><div class="opts">${q[2].map((o, j) => `<button data-j="${j}">${String.fromCharCode(65 + j)}. ${o}</button>`).join('')}</div><div class="fb"></div>`;
+    const a = Assess.ans[i];
+    d.querySelectorAll('.opts button').forEach(b => { const j = +b.dataset.j; if (a !== undefined) { b.disabled = true; if (j === q[3]) b.classList.add('right'); else if (j === a) b.classList.add('wrong'); }
+      b.onclick = () => { Assess.ans[i] = j; renderAssess(); }; });
+    if (a !== undefined) d.querySelector('.fb').innerHTML = (a === q[3] ? '<b style="color:var(--ok)">Correct.</b> ' : '<b style="color:var(--crit)">Not quite.</b> ') + q[4];
+    $('#quiz').appendChild(d);
+  });
+  TASKS.forEach(t => {
+    const d = document.createElement('div'); d.className = 'q'; const r = Assess.task[t.id];
+    d.innerHTML = `<span class="topic">${t.topic} · 2 points</span><div class="qt">${t.title}</div><div style="font-size:13px">${t.text}</div><div class="row">${t.input ? `<input class="num" type="number" id="in_${t.id}" step="0.1" placeholder="Hz">` : ''}${t.choices ? `<select id="in_${t.id}" style="padding:5px;border:1px solid var(--line);border-radius:4px;background:var(--surface-2)">${t.choices.map(c => `<option>${c}</option>`).join('')}</select>` : ''}<button class="btn primary">Check</button></div><div class="fb">${r ? (r[0] ? '<b style="color:var(--ok)">Passed.</b> ' : '<b style="color:var(--crit)">Not yet.</b> ') + r[1] : ''}</div>`;
+    d.querySelector('.btn').onclick = () => { const el = $('#in_' + t.id); const v = el ? (t.input ? +el.value : el.value) : null; const res = t.check(v); Assess.task[t.id] = [res[0], res[1], v, Assess.task[t.id]?.[0] || res[0]]; renderAssess(); };
+    $('#tasks').appendChild(d);
+  });
+  const qScore = Object.entries(Assess.ans).filter(([i, a]) => QUIZ[i][3] === a).length;
+  const tScore = Object.values(Assess.task).filter(r => r[3]).length * 2;
+  const max = QUIZ.length + TASKS.length * 2; $('#score').textContent = `${qScore + tScore} / ${max}`;
+  $('#scoreSub').textContent = `${Object.keys(Assess.ans).length}/${QUIZ.length} questions answered · ${Object.values(Assess.task).filter(r => r[3]).length}/${TASKS.length} tasks passed`;
+  Assess.score = [qScore + tScore, max];
+}
+$('#bQuizReset').onclick = () => { Assess.ans = {}; Assess.task = {}; renderAssess(); };
+$('#bReport').onclick = () => {
+  const k = Sim.S.k, m = Model.MATERIALS[P.mat], name = $('#stuName').value.trim() || '(not entered)';
+  const L = [`CUTTING FORCE DYNAMOMETER LAB — STUDENT REPORT`, `Student: ${name}`, `Date: ${new Date().toLocaleString()}`, `Score: ${Assess.score[0]} / ${Assess.score[1]}`, '',
+    'NOTE: all force data in this report are SIMULATED by an educational model, not measured.', '', 'INTERACTIVE TASKS'];
+  TASKS.forEach(t => { const r = Assess.task[t.id]; L.push(`- ${t.title}: ${r ? (r[3] ? 'PASSED' : 'not passed') + ' — ' + r[1].replace(/<[^>]+>/g, '') : 'not attempted'}`); });
+  L.push('', 'CONCEPT QUESTIONS');
+  QUIZ.forEach((q, i) => { const a = Assess.ans[i]; L.push(`${i + 1}. [${q[0]}] ${a === undefined ? 'not answered' : a === q[3] ? 'correct' : `incorrect (chose ${String.fromCharCode(65 + a)}, answer ${String.fromCharCode(65 + q[3])})`}`); });
+  L.push('', 'FINAL SIMULATOR SETUP', `Material: ${m.name}; D ${P.D} mm; z ${P.z}; Vc ${P.Vc} m/min; fz ${P.fz} mm; ap ${P.ap} mm; ae ${k.ae.toFixed(1)} mm; ${P.mode}`,
+    `N ${k.N.toFixed(0)} rpm; Vf ${k.Vf.toFixed(0)} mm/min; f_TP ${k.TPF.toFixed(1)} Hz`, `Chain: range ${P.scale} N/V; fs ${P.fs} Hz; fc ${P.fc} Hz; fn ${P.fn} Hz`, '', 'RECORDED TRIALS');
+  const tr = Store.load(); if (!tr.length) L.push('(none)'); tr.forEach(t => L.push(`${t.id}: ${t.mat}, fz ${t.fz}, ap ${t.ap}, ae ${t.ae} → mean Fr ${t.frMean} N, peak Fr ${t.frPeak} N`));
+  openExport('Assessment report', 'dynamometer_report.txt', L.join('\n'));
+};
+
+/* ---- constants and theory ---- */
+function renderConstants() {
+  $('#constTbl').innerHTML = `<tr><th>Quantity</th><th>Symbol</th><th>Value / expression</th><th>Cat.</th><th>Source</th></tr>` + CONSTS.map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td class="mono">${r[2]}</td><td><span class="cat ${r[3]}">${r[3]}</span></td><td class="mono">[${r[4]}]</td></tr>`).join('');
+  $('#srcList').innerHTML = SOURCES.map(s => `<li><span class="mono">[${s.id}]</span> ${s.text}${s.url ? ` <a href="${s.url}" target="_blank" rel="noopener">${s.url.replace('https://', '').slice(0, 48)}…</a>` : ''}</li>`).join('');
+  $('#theory').innerHTML = `
+<h3>1 · How the dynamometer measures force</h3>
+<p>The workpiece is clamped to a cover plate that rests on four preloaded three-component quartz sensors. A cutting force on the workpiece is carried through the cover plate into the sensors and on to the base plate and machine table. Each sensor contains quartz rings: one cut for the longitudinal effect, which responds to compression (Fz), and two cut for the shear effect, which respond to Fx and Fy. The preload makes the stack act as one stiff body, transmits shear by friction and keeps the response linear.</p>
+<p>Mechanical stress in quartz displaces the centres of positive and negative charge in the crystal lattice, so a charge appears on the electrode faces. For one plate under the longitudinal effect Q ≈ d₁₁·F with d₁₁ ≈ 2.3 pC/N. Several plates in parallel and four sensors summed per component give the dynamometer sensitivity, nominally −7.5 pC/N in x and y and −3.7 pC/N in z for the 9257B. The deflection is tiny: with 1 kN/µm stiffness, 500 N moves the plate about 0.5 µm. The 3D view exaggerates it.</p>
+<h3>2 · Kinematics</h3>
+<div class="eq">N  = 1000 · Vc / (π · D)          [rpm]
+Vf = N · z · fz                    [mm/min]
+f_TP = N · z / 60                  [Hz]  tooth-passing frequency</div>
+<h3>3 · Mechanistic milling force model (Altintas)</h3>
+<div class="eq">φ_j(θ, z) = θ + j·2π/z_t − (tan β / R)·z      immersion angle of tooth j at height z
+h(φ) = fz · sin φ                             instantaneous chip thickness, φst ≤ φ ≤ φex
+dFt = (Ktc·h + Kte)·dz    dFr = (Krc·h + Kre)·dz    dFa = (Kac·h + Kae)·dz
+Fx = Σ(−dFt·cos φ − dFr·sin φ)    Fy = Σ(dFt·sin φ − dFr·cos φ)    Fz = Σ dFa
+Up milling: φst = 0, φex = acos(1 − ae/R);  down milling: φst = π − acos(1 − ae/R), φex = π
+F_workpiece = −F_tool          Fr = √(Fx² + Fy² + Fz²)</div>
+<p>The summation runs over teeth and 8 axial discs, so helix lag spreads each tooth’s engagement and smooths the signal. A tooth only cuts where it is inside the workpiece, which produces realistic entry and exit transients.</p>
+<h3>4 · Measurement chain model</h3>
+<div class="eq">Structure:      G(s) = ωn² / (s² + 2ζωn·s + ωn²)         dynamometer + workpiece, per axis
+Crosstalk:      F' = C · F                                small off-diagonal terms (illustrative)
+Charge:         Q = S · F' + Q_offset + Q_drift + noise   S = −7.5, −7.5, −3.7 pC/N
+Charge amp:     V = Q / (S · range)   (ideal: V = −Q/Cf)  saturates at ±10 V
+Filter + ADC:   2nd-order Butterworth low-pass at fc, sample at fs, 16-bit quantisation
+Displayed:      F = V · range</div>
+<p>The chain runs at an internal rate of 100 kHz and is then sampled at f<sub>s</sub>. This lets you see aliasing when the cutoff is above Nyquist, and resonance when a tooth-passing harmonic approaches the mounted natural frequency.</p>
+<h3>5 · What this simulator is and is not</h3>
+<p>It is a teaching model. The dynamometer specifications marked A are taken from the Kistler 9257B product page; everything about its internal construction is an educational representation. Aluminium coefficients are Altintas’s Al7050 values used as a proxy; the steel and stainless coefficients are illustrative. The model ignores tool run-out, wear, deflection, chatter, temperature and size effects. Use it to build intuition and to plan experiments, and use a calibrated instrument for any number you publish.</p>`;
+}
+
+/* =====================================================================
+   MAIN — boot, render loop, events
+   ===================================================================== */
+function boot() {
+  readTokens(); buildControls(); syncControls(); Sim.configure(); renderDerived(); buildChain(); renderConstants(); renderAssess(); renderSteps();
+  const vp = $('#vp'), cv = $('#three');
+  if (!window.THREE || !THREE.OrbitControls) { St.ok3d = false; vp.insertAdjacentHTML('beforeend', '<div class="loadfail"><div><b>3D view unavailable</b><br>Three.js could not load from the CDN. The force model, dashboard and assessment still work.</div></div>'); }
+  else {
+    try { Scene3D.init(cv); } catch (e) { console.error(e); St.ok3d = false; vp.insertAdjacentHTML('beforeend', '<div class="loadfail"><div><b>3D view unavailable</b><br>WebGL could not start in this browser. The force model, dashboard and assessment still work.</div></div>'); }
+  }
+  const ro = new ResizeObserver(() => { if (St.ok3d) Scene3D.resize(vp.clientWidth, vp.clientHeight); }); ro.observe(vp);
+  if (St.ok3d) {
+    let down = null;
+    cv.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
+    cv.addEventListener('pointerup', e => { if (!down) return; const d = Math.hypot(e.clientX - down[0], e.clientY - down[1]); down = null; if (d < 5) { const p = Scene3D.pick(e.clientX, e.clientY); if (p) info(p); } });
+  }
+  const mq = window.matchMedia('(prefers-color-scheme: dark)'); const re = () => { readTokens(); if (St.ok3d) Scene3D.setTheme(); renderTrials(); };
+  mq.addEventListener?.('change', re); new MutationObserver(re).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  resetAll('guided'); renderTrials();
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    Tw.update(dt); Sim.step(dt);
+    if (Sim.S.passEvent) { Sim.S.passEvent = false; toast('Pass complete. Press “New pass” to cut again.'); Sim.S.spindle = false; updateButtons(); }
+    if (St.ok3d) { try { Scene3D.update(dt, St); } catch (e) { console.error(e); St.ok3d = false; } }
+    uiTimer -= dt; if (uiTimer <= 0) { uiTimer = .12; updateReadouts(); }
+    plotTimer -= dt; if (plotTimer <= 0) { plotTimer = .05; updatePlots(); }
+    anaTimer -= dt; if (anaTimer <= 0) { anaTimer = .6; refreshAnalysis(false); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+boot();
+</script>
+</html>
